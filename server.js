@@ -13,19 +13,6 @@ import morgan from "morgan";
 import paymentAPI from "./config/razorpay.js";
 import router from "./routes/paymentRoutes.js";
 
-
-// const express = require("express");
-// const passport = require("passport");
-// const GoogleStrategy = require("passport-google-oauth20").Strategy;
-// const session = require("express-session");
-// const mongoose = require("mongoose");
-// const { User, Job, Admin } = require("./schema");
-// const CORS = require("cors");
-// const jwt = require('jsonwebtoken');
-// const morgan = require('morgan');
-// const paymentAPI = require('./config/razorpay');
-// const router = require('./routes/paymentRoutes');
-
 // Initialize cors
 const app = express();
 app.use(cors());
@@ -52,6 +39,7 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+
 app.use("/api/v1", router)
 
 export const instance = await paymentAPI();
@@ -70,7 +58,7 @@ passport.use(new GoogleStrategy({
             const profilephoto = profile.photos[0].value;
 
             // Check if user already exists
-            let user = await User.findOne({ email: email });
+            let user = await Users.findOne({ email: email });
             if (!user) {
                 // If user doesn't exist, create a new one
                 user = new User({
@@ -137,7 +125,7 @@ app.post("/addJob", async (req, res) => {
     console.log(req.body);
     const job = new Job(req.body);
     try {
-        let user = await User.findOne({ email: req.body.email });
+        let user = await Users.findOne({ email: req.body.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
@@ -163,7 +151,7 @@ app.get("/getJobs", async (req, res) => {
 
 app.get("/getUser/:email", async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.params.email });
+        const user = await Users.findOne({ email: req.params.email });
         res.send(user);
     } catch (error) {
         res.status(500).send(error);
@@ -172,7 +160,7 @@ app.get("/getUser/:email", async (req, res) => {
 
 app.get("/getUsers", async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await Users.find();
         res.send(users);
     } catch (error) {
         res.status(500).send(error);
@@ -181,7 +169,7 @@ app.get("/getUsers", async (req, res) => {
 
 app.post("/updateUser/:email", async (req, res) => {
     try {
-        const user = await User.findOneAndUpdate(
+        const user = await Users.findOneAndUpdate(
             { email: req.params.email },
             { $set: { isPremium: req.body.isPremium } },
             { new: true }
@@ -199,7 +187,7 @@ app.post("/updateUser/:email", async (req, res) => {
 
 app.get('/getJobs/:email', async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.params.email });
+        const user = await Users.findOne({ email: req.params.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
@@ -222,7 +210,7 @@ app.delete("/deleteJob/:jobId", async (req, res) => {
             return res.status(404).send("Job not found");
         }
 
-        const user = await User.findOne({ email: job.email });
+        const user = await Users.findOne({ email: job.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
