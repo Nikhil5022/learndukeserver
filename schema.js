@@ -15,8 +15,17 @@ const userSchema = new mongoose.Schema({
         default: []
     },
     profilephoto: {
-        type: String,
-        default: ''
+        // type: String,
+        // default: ''
+        public_id: {
+            type: String,
+            required: true,
+            default: "1234",
+          },
+          url: {
+            type: String,
+            required: true,
+          },
     },
     isPremium: {
         type: Boolean,

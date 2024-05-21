@@ -12,12 +12,19 @@ import jwt from "jsonwebtoken";
 import morgan from "morgan";
 import paymentAPI from "./config/razorpay.js";
 import router from "./routes/paymentRoutes.js";
+import cloudinary from "cloudinary"
+import { v2 as cloud } from "cloudinary";
+import bodyParser from "body-parser";
+import fileUpload from "express-fileupload";
 
 // Initialize cors
 const app = express();
 app.use(cors());
 app.use(morgan("dev"));
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit: 5000000}));
 app.use(express.json());
+app.use(fileUpload());
 
 // Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI, {
@@ -28,6 +35,12 @@ mongoose.connect(process.env.MONGO_URI, {
 }).catch((err) => {
     console.error("Error connecting to MongoDB Atlas:", err.message);
 });
+
+cloudinary.v2.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });  
 
 // Express session middleware
 app.use(session({
@@ -58,7 +71,7 @@ passport.use(new GoogleStrategy({
             const profilephoto = profile.photos[0].value;
 
             // Check if user already exists
-            let user = await Users.findOne({ email: email });
+            let user = await User.findOne({ email: email });
             if (!user) {
                 // If user doesn't exist, create a new one
                 user = new User({
@@ -125,7 +138,7 @@ app.post("/addJob", async (req, res) => {
     console.log(req.body);
     const job = new Job(req.body);
     try {
-        let user = await Users.findOne({ email: req.body.email });
+        let user = await User.findOne({ email: req.body.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
@@ -151,7 +164,7 @@ app.get("/getJobs", async (req, res) => {
 
 app.get("/getUser/:email", async (req, res) => {
     try {
-        const user = await Users.findOne({ email: req.params.email });
+        const user = await User.findOne({ email: req.params.email });
         res.send(user);
     } catch (error) {
         res.status(500).send(error);
@@ -160,7 +173,7 @@ app.get("/getUser/:email", async (req, res) => {
 
 app.get("/getUsers", async (req, res) => {
     try {
-        const users = await Users.find();
+        const users = await User.find();
         res.send(users);
     } catch (error) {
         res.status(500).send(error);
@@ -169,7 +182,7 @@ app.get("/getUsers", async (req, res) => {
 
 app.post("/updateUser/:email", async (req, res) => {
     try {
-        const user = await Users.findOneAndUpdate(
+        const user = await User.findOneAndUpdate(
             { email: req.params.email },
             { $set: { isPremium: req.body.isPremium } },
             { new: true }
@@ -187,7 +200,7 @@ app.post("/updateUser/:email", async (req, res) => {
 
 app.get('/getJobs/:email', async (req, res) => {
     try {
-        const user = await Users.findOne({ email: req.params.email });
+        const user = await User.findOne({ email: req.params.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
@@ -210,7 +223,7 @@ app.delete("/deleteJob/:jobId", async (req, res) => {
             return res.status(404).send("Job not found");
         }
 
-        const user = await Users.findOne({ email: job.email });
+        const user = await User.findOne({ email: job.email });
         if (!user) {
             return res.status(404).send("User not found");
         }
@@ -272,10 +285,26 @@ app.post('/editUserData/:email', async (req, res) => {
     const data = req.body;
     try {
         const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
 
+        if(data.profilephoto){
+            console.log("hii")
+            const imageId = user.profilephoto.public_id && user.profilephoto.public_id;
+            
+            await cloud.uploader.destroy(imageId);
+
+            const newPic = await cloud.uploader.upload(data.profilephoto, {
+                folder: "LearnDuke",
+                width: 150,
+                crop: "scale",
+            });
+            
+            data.profilephoto = {
+                public_id: newPic.public_id,
+                url: newPic.secure_url,
+            };
+
+            
+        }
         // Update the user fields that are present in the request body
         Object.keys(data).forEach(key => {
             user[key] = data[key];
