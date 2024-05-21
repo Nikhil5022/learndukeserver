@@ -10,16 +10,37 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-
     jobs: {
-        type: [String] // Array of job IDs or job names
+        type: [String], // Array of job IDs or job names
+        default: []
     },
     profilephoto: {
-        type: String
+        type: String,
+        default: ''
     },
     isPremium: {
         type: Boolean,
         default: false
+    },
+    linkedin: {
+        type: String,
+        default: ''
+    },
+    github: {
+        type: String,
+        default: ''
+    },
+    phoneNumber: { 
+        type: String,
+        default: ''
+    },
+    whatsappNumber: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
     }
 
 });
