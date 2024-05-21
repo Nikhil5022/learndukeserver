@@ -224,21 +224,66 @@ app.post("/login", async (req, res) => {
         const admin = await Admin.findOne({ email });
 
         if (!admin) {
-            return res.send({message: "Admin not found"})
+            return res.send({ message: "Admin not found" })
         }
 
         if (admin.password !== password) {
-            return res.send({message: "Invalid password"})  
+            return res.send({ message: "Invalid password" })
         }
 
         const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-       res.send({message: "Login successful", token})
+        res.send({ message: "Login successful", token })
     } catch (error) {
         console.error("Server error:", error);
         res.status(500).send("Server error");
     }
 });
+
+
+app.post('/updateUserInfo/:email', async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.params.email });
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+        user.linkedin = req.body.linkedin;
+        user.github = req.body.github;
+        user.phoneNumber = req.body.phoneNumber;
+        user.whatsappNumber = req.body.whatsappNumber;
+        user.bio = req.body.bio;
+        await user.save();
+        res.send(user);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+
+app.post('/editUserData/:email', async (req, res) => {
+    const data = req.body;
+    try {
+        const user = await User.findOne({ email: req.params.email });
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        // Update the user fields that are present in the request body
+        Object.keys(data).forEach(key => {
+            user[key] = data[key];
+        });
+
+        // Save the updated user
+        await user.save();
+
+        res.status(200).send("User data updated successfully");
+    } catch (error) {
+        console.error("Error updating user data:", error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+
 
 // Start server
 const PORT = process.env.PORT || 3000;
