@@ -79,13 +79,19 @@ passport.use(new GoogleStrategy({
                     name: name,
                     jobs: [],
                     accessToken: accessToken,
-                    profilephoto: profilephoto
+                    profilephoto:{
+                        public_id: "1234",
+                        url: profilephoto
+                    }
                 });
                 await user.save();
             } else {
                 // If user exists, update their accessToken and profile photo
                 user.accessToken = accessToken;
-                user.profilephoto = profilephoto;
+                user.profilephoto = {
+                    public_id: "1234",
+                    url: profilephoto
+                };
                 await user.save();
             }
 
@@ -287,12 +293,11 @@ app.post('/editUserData/:email', async (req, res) => {
         const user = await User.findOne({ email: req.params.email });
 
         if(data.profilephoto){
-            console.log("hii")
             const imageId = user.profilephoto.public_id && user.profilephoto.public_id;
             
             await cloud.uploader.destroy(imageId);
 
-            const newPic = await cloud.uploader.upload(data.profilephoto, {
+            const newPic = await cloud.uploader.upload(data.profilephoto.url, {
                 folder: "LearnDuke",
                 width: 150,
                 crop: "scale",
