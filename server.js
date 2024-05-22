@@ -1,19 +1,30 @@
 // Load environment variables from .env file
-require('dotenv').config();
-
-const express = require("express");
-const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const session = require("express-session");
-const mongoose = require("mongoose");
-const { User, Job, Admin } = require("./schema");
-const CORS = require("cors");
-const jwt = require('jsonwebtoken');
+import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
+import passport from "passport";
+import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
+import session from "express-session";
+import mongoose from "mongoose";
+import { User, Job, Admin } from "./schema.js";
+import cors from "cors";
+import jwt from "jsonwebtoken";
+import morgan from "morgan";
+import paymentAPI from "./config/razorpay.js";
+import router from "./routes/paymentRoutes.js";
+import cloudinary from "cloudinary"
+import { v2 as cloud } from "cloudinary";
+import bodyParser from "body-parser";
+import fileUpload from "express-fileupload";
 
 // Initialize cors
 const app = express();
-app.use(CORS());
+app.use(cors());
+app.use(morgan("dev"));
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit: 5000000}));
 app.use(express.json());
+app.use(fileUpload());
 
 // Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI, {
@@ -25,6 +36,12 @@ mongoose.connect(process.env.MONGO_URI, {
     console.error("Error connecting to MongoDB Atlas:", err.message);
 });
 
+cloudinary.v2.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });  
+
 // Express session middleware
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -35,6 +52,10 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use("/api/v1", router)
+
+export const instance = await paymentAPI();
 
 // Google OAuth 2.0 configuration
 passport.use(new GoogleStrategy({
@@ -58,13 +79,19 @@ passport.use(new GoogleStrategy({
                     name: name,
                     jobs: [],
                     accessToken: accessToken,
-                    profilephoto: profilephoto
+                    profilephoto:{
+                        public_id: "1234",
+                        url: profilephoto
+                    }
                 });
                 await user.save();
             } else {
                 // If user exists, update their accessToken and profile photo
                 user.accessToken = accessToken;
-                user.profilephoto = profilephoto;
+                user.profilephoto = {
+                    public_id: "1234",
+                    url: profilephoto
+                };
                 await user.save();
             }
 
@@ -264,10 +291,25 @@ app.post('/editUserData/:email', async (req, res) => {
     const data = req.body;
     try {
         const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
 
+        if(data.profilephoto){
+            const imageId = user.profilephoto.public_id && user.profilephoto.public_id;
+            
+            await cloud.uploader.destroy(imageId);
+
+            const newPic = await cloud.uploader.upload(data.profilephoto.url, {
+                folder: "LearnDuke",
+                width: 150,
+                crop: "scale",
+            });
+            
+            data.profilephoto = {
+                public_id: newPic.public_id,
+                url: newPic.secure_url,
+            };
+
+            
+        }
         // Update the user fields that are present in the request body
         Object.keys(data).forEach(key => {
             user[key] = data[key];

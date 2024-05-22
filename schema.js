@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -15,8 +15,17 @@ const userSchema = new mongoose.Schema({
         default: []
     },
     profilephoto: {
-        type: String,
-        default: ''
+        // type: String,
+        // default: ''
+        public_id: {
+            type: String,
+            required: true,
+            default: "1234",
+          },
+          url: {
+            type: String,
+            required: true,
+          },
     },
     isPremium: {
         type: Boolean,
@@ -106,5 +115,5 @@ const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 
-module.exports = { User, Job, Admin };
- 
+
+export  {Admin, Job, User};
