@@ -77,6 +77,19 @@ const jobSchema = new mongoose.Schema({
     email: {
         type: String,
     },
+    responsibilities: {
+        type: String,
+        default: ''
+    },
+    requirements: {
+        type: String,
+        default: ''
+    },
+    tags: {
+        type: [String],
+        default: []
+    }
+    
 });
 
 const adminSchema = new mongoose.Schema({
@@ -94,3 +107,4 @@ const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 
 module.exports = { User, Job, Admin };
+ 

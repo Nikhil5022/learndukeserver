@@ -283,6 +283,52 @@ app.post('/editUserData/:email', async (req, res) => {
     }
 });
 
+// get job by id
+app.get('/getJobById/:jobId', async (req, res) => {
+    try {
+        const job = await Job.findOne({ _id: req.params.jobId });
+        if (!job) {
+            return res.status(404).send("Job not found");
+        }
+        res.send(job);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+
+app.get('/getSimilarJobs/:jobId', async (req, res) => {
+    try {
+        const jobId = req.params.jobId;
+
+        // Fetch the current job by its ID
+        const currjob = await Job.findById(jobId);
+        if (!currjob) {
+            return res.status(404).send("Job not found");
+        }
+
+
+        const tags = currjob.tags;
+        if (!tags || tags.length === 0) {
+            return res.status(404).send("No similar jobs found");
+        }
+
+
+        // Find jobs with at least one matching tag, excluding the current job
+        const similarJobs = await Job.find({
+            _id: { $ne: currjob._id },
+            tags: { $in: tags }
+        });
+
+
+        res.send(similarJobs);
+    } catch (error) {
+        console.error("Error fetching similar jobs:", error);
+        res.status(500).send(error);
+    }
+});
+
+
 
 
 // Start server
