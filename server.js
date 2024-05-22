@@ -90,7 +90,7 @@ passport.use(new GoogleStrategy({
                 user.accessToken = accessToken;
                 user.profilephoto = {
                     public_id: "1234",
-                    url: profilephoto
+                    url: user.profilephoto.url
                 };
                 await user.save();
             }
