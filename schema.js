@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -116,4 +117,5 @@ const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 
 
-export  {Admin, Job, User};
+// export  {Admin, Job, User};
+module.exports = {Admin, Job, User};

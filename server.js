@@ -1,21 +1,38 @@
 // Load environment variables from .env file
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
+// dotenv.config();
+// import express from "express";
+// import passport from "passport";
+// import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
+// import session from "express-session";
+// import mongoose from "mongoose";
+// import { User, Job, Admin } from "./schema.js";
+// import cors from "cors";
+// import jwt from "jsonwebtoken";
+// import morgan from "morgan";
+// import router from "./routes/paymentRoutes.js";
+// import cloudinary from "cloudinary"
+// import { v2 as cloud } from "cloudinary";
+// import bodyParser from "body-parser";
+// import fileUpload from "express-fileupload";
+
+const dotenv = require("dotenv");
 dotenv.config();
-import express from "express";
-import passport from "passport";
-import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
-import session from "express-session";
-import mongoose from "mongoose";
-import { User, Job, Admin } from "./schema.js";
-import cors from "cors";
-import jwt from "jsonwebtoken";
-import morgan from "morgan";
-import paymentAPI from "./config/razorpay.js";
-import router from "./routes/paymentRoutes.js";
-import cloudinary from "cloudinary"
-import { v2 as cloud } from "cloudinary";
-import bodyParser from "body-parser";
-import fileUpload from "express-fileupload";
+const express = require("express");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const session = require("express-session");
+const mongoose = require("mongoose");
+const { User, Job, Admin } = require("./schema");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const morgan = require("morgan");
+// const router = require("./routes/paymentRoutes");
+const cloudinary = require("cloudinary");
+const { v2: cloud } = require("cloudinary");
+const bodyParser = require("body-parser");
+const fileUpload = require("express-fileupload");
+const crypto = require("crypto");
 
 // Initialize cors
 const app = express();
@@ -49,13 +66,102 @@ app.use(session({
     saveUninitialized: true
 }));
 
+const Razorpay= require('razorpay');
+const paymentAPI = async () => {
+    try {
+        const instance = new Razorpay({
+            key_id: process.env.RZP_KEY_ID,
+            key_secret: process.env.RZP_KEY_SECRET,
+        })
+        console.log('Payment integration successful.')
+        return instance;
+    } catch (error) {
+        console.log("Error connecting payment api : " + error)
+    }
+}
+
+
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/api/v1", router)
+// app.use("/api/v1", router)
 
-export const instance = await paymentAPI();
+ const instance =  paymentAPI();
+
+ const checkout = async (req, res) => {
+    try {
+      const options = {
+        amount: Number(req.body.amount * 100),
+        currency: "INR",
+        receipt: `R-ABCS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}`,
+      };
+  
+      const order = await instance.orders.create(options);
+  
+      await res.status(200).json({
+        success: true,
+        order,
+      });
+    }
+    catch (e) {
+      res.status(400).json({
+        success: false,
+        message: e.message,
+      });
+  
+  
+  
+    }
+  };
+  
+   const paymentVerification = async (req, res) => {
+  
+    try {
+  
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+      } = req.body;
+  
+      const user = await User.findOne({ email: req.params.id });
+  
+      const sign = razorpay_order_id + "|" + razorpay_payment_id;
+  
+      const expectedSign = crypto
+        .createHmac("sha256", process.env.RZP_KEY_SECRET)
+        .update(sign.toString())
+        .digest("hex");
+  
+      // check both signs
+      const isAuthentic = expectedSign === razorpay_signature;
+  
+      if (isAuthentic) {
+        // Database comes here
+        // await Payment.create({
+        //   razorpay_order_id,
+        //   razorpay_payment_id,
+        //   razorpay_signature,
+        // });
+        user.isPremium = true;
+        await user.save();
+        res.redirect(
+          `http://localhost:5173/paymentsuccess`
+        );
+      } else {
+        res.redirect("http://localhost:5173/paymentfailed")
+      }
+    } catch (e) {
+      res.redirect("http://localhost:5173/paymentfailed")
+    }
+  }
+  
+   const sendKey = async (req, res) => {
+    res.status(200).json({
+      key: process.env.RZP_KEY_ID,
+    });
+  };
 
 // Google OAuth 2.0 configuration
 passport.use(new GoogleStrategy({
@@ -375,6 +481,9 @@ app.get("/", (req, res) => {
 });
 
 
+app.post("/checkout", checkout);
+app.post("/verify/payment/:id", paymentVerification);
+app.get("/getkey", sendKey);
 
 
 // Start server
