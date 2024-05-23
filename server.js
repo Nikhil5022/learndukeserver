@@ -150,13 +150,13 @@ app.use(passport.session());
         user.isPremium = true;
         await user.save();
         res.redirect(
-          `http://localhost:5173/paymentsuccess`
+          `https://learnduke-frontend.vercel.app/paymentsuccess`
         );
       } else {
-        res.redirect("http://localhost:5173/paymentfailed")
+        res.redirect("https://learnduke-frontend.vercel.app/paymentfailed")
       }
     } catch (e) {
-      res.redirect("http://localhost:5173/paymentfailed")
+      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed")
     }
   }
   
@@ -238,7 +238,7 @@ app.get("/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
     (req, res) => {
         // Successful authentication, redirect to home page or handle as needed
-        res.redirect(`http://localhost:5173/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`);
+        res.redirect(`https://learnduke-frontend.vercel.app/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`);
     }
 );
 
