@@ -67,18 +67,18 @@ app.use(session({
 }));
 
 const Razorpay= require('razorpay');
-const paymentAPI = async () => {
-    try {
-        const instance = new Razorpay({
-            key_id: process.env.RZP_KEY_ID,
-            key_secret: process.env.RZP_KEY_SECRET,
-        })
-        console.log('Payment integration successful.')
-        return instance;
-    } catch (error) {
-        console.log("Error connecting payment api : " + error)
-    }
-}
+// const paymentAPI = async () => {
+//     try {
+//         const instance = new Razorpay({
+//             key_id: process.env.RZP_KEY_ID,
+//             key_secret: process.env.RZP_KEY_SECRET,
+//         })
+//         console.log('Payment integration successful.')
+//         return instance;
+//     } catch (error) {
+//         console.log("Error connecting payment api : " + error)
+//     }
+// }
 
 
 // Passport middleware
@@ -87,7 +87,10 @@ app.use(passport.session());
 
 // app.use("/api/v1", router)
 
- const instance =  paymentAPI();
+ const instance = new Razorpay({
+    key_id: process.env.RZP_KEY_ID,
+    key_secret: process.env.RZP_KEY_SECRET,
+});
 
  const checkout = async (req, res) => {
     try {
