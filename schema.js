@@ -98,7 +98,11 @@ const jobSchema = new mongoose.Schema({
     tags: {
         type: [String],
         default: []
-    }
+    },
+    domain: {
+        type: String,
+        default: ''
+    },
     
 });
 
