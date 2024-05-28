@@ -116,10 +116,43 @@ const adminSchema = new mongoose.Schema({
     }
 });
 
+
+const paymentSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    plan: {
+        type: String,
+        enum: ['Basic', 'Standard', 'Premium', 'Enterprise'],
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    paymentDate: {
+        type: Date,
+        default: Date.now
+    },
+    transactionId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Completed', 'Failed'],
+        default: 'Pending'
+    }
+});
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
+const Payment = mongoose.model("Payment", paymentSchema);
 
 
 // export  {Admin, Job, User};
-module.exports = {Admin, Job, User};
+module.exports = {Admin, Job, User, Payment};
