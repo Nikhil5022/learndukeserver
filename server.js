@@ -224,6 +224,7 @@ passport.use(new GoogleStrategy({
                     url: user.profilephoto.url
                 };
                 await user.save();
+                
             }
 
             console.log("User details saved to database:", user);
