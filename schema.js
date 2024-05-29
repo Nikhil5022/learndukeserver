@@ -1,6 +1,7 @@
 // import mongoose from "mongoose";
 const mongoose = require('mongoose');
 
+
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
@@ -51,7 +52,16 @@ const userSchema = new mongoose.Schema({
     bio: {
         type: String,
         default: ''
-    }
+    },
+    payments: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'Payment',
+        default: []
+    },
+    plans: {
+        type: [String],
+        default: []
+    },  
 
 });
 
@@ -118,14 +128,10 @@ const adminSchema = new mongoose.Schema({
 
 
 const paymentSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
+    
     plan: {
         type: String,
-        enum: ['Basic', 'Standard', 'Premium', 'Enterprise'],
+        enum: ["Basic", "Advance", "Premium","Teacher Pro"],
         required: true
     },
     amount: {
@@ -136,7 +142,7 @@ const paymentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    transactionId: {
+    razorpay_order_id: {
         type: String,
         required: true,
         unique: true
@@ -145,6 +151,18 @@ const paymentSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Completed', 'Failed'],
         default: 'Pending'
+    },
+    razorpay_payment_id: {
+        type: String,
+        default: ''
+    },
+    razorpay_signature: {
+        type: String,
+        default: ''
+    },
+    user: {
+        type: "String",
+        required: true
     }
 });
 

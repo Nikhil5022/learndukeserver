@@ -23,7 +23,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin } = require("./schema");
+const { User, Job, Admin, Payment } = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -497,6 +497,25 @@ app.get('/getSimilarJobs/:jobId', async (req, res) => {
         res.send(similarJobs);
     } catch (error) {
         console.error("Error fetching similar jobs:", error);
+        res.status(500).send(error);
+    }
+});
+
+
+app.post('/addPayment', async (req, res) => {
+    try {
+        const payment = new Payment(req.body);
+        const user = await User.findOne({ email: payment.user });
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+        user.isPremium = true;
+        user.plans.push(payment.plan);
+        user.payments.push(payment._id);
+        await user.save();
+        await payment.save();
+        res.send(payment);
+    } catch (error) {
         res.status(500).send(error);
     }
 });
