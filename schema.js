@@ -163,7 +163,11 @@ const paymentSchema = new mongoose.Schema({
     user: {
         type: "String",
         required: true
-    }
+    },
+    expirationDate: {
+        type: Date,
+        required: true
+    },
 });
 
 const Admin = mongoose.model("Admin", adminSchema);
