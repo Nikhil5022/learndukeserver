@@ -113,6 +113,14 @@ const jobSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    isReviewed: {
+        type: Boolean,
+        default: false
+    },
+    isRejected: {
+        type: Boolean,
+        default: false
+    },
     
 });
 
@@ -168,6 +176,11 @@ const paymentSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
+    transactionId: {
+        type: String,
+        required: true,
+        unique: true, // Ensures the transactionId is unique
+      },
 });
 
 const Admin = mongoose.model("Admin", adminSchema);

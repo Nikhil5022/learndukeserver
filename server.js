@@ -33,6 +33,8 @@ const { v2: cloud } = require("cloudinary");
 const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
 const crypto = require("crypto");
+const cron = require('node-cron');
+
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
@@ -517,9 +519,25 @@ app.post('/addPayment', async (req, res) => {
         await payment.save();
         res.send(payment);
     } catch (error) {
+        console.log("Error adding payment:", error);
         res.status(500).send(error);
     }
 });
+
+
+const checkExpiringSubscritions = async () => {
+    const payments = await Payment.find({expirationDate:new Date()});
+    payments.forEach(async (payment) => {
+        const user = await User.findOne({email:payment.user});
+        user.isPremium = false;
+        await user.save();
+    }
+    )
+}
+
+cron.schedule('0 0 * * *', () => {
+    checkExpiringSubscritions();
+  } );
 
 app.get("/", (req, res) => {
     res.send("Home Page");
