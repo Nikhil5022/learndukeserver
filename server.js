@@ -34,7 +34,6 @@ const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
 const crypto = require("crypto");
 const cron = require('node-cron');
-
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
@@ -65,6 +64,7 @@ app.use(fileUpload());
 //         res.status(500).json({ error: "Failed to generate job description" });
 //     }
 // });
+
 
 
 // Connect to MongoDB Atlas
@@ -535,9 +535,116 @@ const checkExpiringSubscritions = async () => {
     )
 }
 
+
+
+
 cron.schedule('0 0 * * *', () => {
     checkExpiringSubscritions();
   } );
+
+
+app.get('/getReviewedJobs/', async (req, res) => {
+    try {
+        const jobs = await Job.find({ isReviewed: true });
+        res.send(jobs);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+}
+);
+
+app.post('/undoReview/:jobId', async (req, res) => {
+    try {
+        const job = await Job.findOneAndUpdate(
+            { _id: req.params.jobId },
+            { $set: { isReviewed: false } },
+            { new: true }
+        );
+
+        if (!job) {
+            return res.status(404).send("Job not found");
+        }
+
+        res.send(job);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+app.post('/rejectJob/:jobId', async (req, res) => {
+    try {
+        const job = await Job.findOneAndUpdate(
+            { _id: req.params.jobId },
+            { $set: { isRejected: true } },
+            { new: true }
+        );
+
+        if (!job) {
+            return res.status(404).send("Job not found");
+        }
+
+        res.send(job);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+app.post('/approveJob/:jobId', async (req, res) => {
+    try {
+        const job = await Job.findOneAndUpdate(
+            { _id: req.params.jobId },
+            { $set: { isReviewed: true } },
+            { new: true }
+        );
+
+        if (!job) {
+            return res.status(404).send("Job not found");
+        }
+
+        res.send(job);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+app.post('/undoReject/:jobId', async (req, res) => {
+    try {
+        const job = await Job.findOneAndUpdate(
+            { _id: req.params.jobId },
+            { $set: { isRejected: false } },
+            { new: true }
+        );
+
+        if (!job) {
+            return res.status(404).send("Job not found");
+        }
+
+        res.send(job);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+
+// emails section
+
+app.post('/sendEmail', async (req, res) => {
+    try {
+        const { to, subject, text } = req.body;
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to,
+            subject,
+            text
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.send("Email sent successfully");
+    } catch (error) {
+        console.error("Error sending email:", error);
+        res.status(500).send("Internal server error");
+    }
+});
 
 app.get("/", (req, res) => {
     res.send("Home Page");
