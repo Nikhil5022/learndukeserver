@@ -646,6 +646,25 @@ app.post('/sendEmail', async (req, res) => {
     }
 });
 
+app.get('/getSubscriptions/:email', async (req, res) => {
+    try {
+      const user = await User.findOne({ email: req.params.email });
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      const subscriptions = user.payments;
+      const allPayments = [];
+      for (let i = 0; i < subscriptions.length; i++) {
+        const payment = await Payment.findOne({ _id: subscriptions[i] });
+        allPayments.push(payment);
+      }
+      res.send(allPayments); // Send the allPayments array
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  });
+  
+
 app.get("/", (req, res) => {
     res.send("Home Page");
 });
