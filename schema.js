@@ -121,6 +121,18 @@ const jobSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    benifits: {
+        type:[],
+        default: []
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    education: {
+        type: String,
+        default: ''
+    },
     
 });
 
