@@ -424,40 +424,54 @@ app.post('/updateUserInfo/:email', async (req, res) => {
 app.post('/editUserData/:email', async (req, res) => {
     const data = req.body;
     try {
-        const user = await User.findOne({ email: req.params.email });
-
-        if(data.profilephoto){
-            const imageId = user.profilephoto.public_id && user.profilephoto.public_id;
-            
-            await cloud.uploader.destroy(imageId);
-
-            const newPic = await cloud.uploader.upload(data.profilephoto.url, {
-                folder: "LearnDuke",
-                width: 150,
-                crop: "scale",
-            });
-            
-            data.profilephoto = {
-                public_id: newPic.public_id,
-                url: newPic.secure_url,
-            };
-
-            
+      const user = await User.findOne({ email: req.params.email });
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
+  
+      if (data.profilephoto && data.profilephoto.url) {
+        const imageId = user.profilephoto ? user.profilephoto.public_id : null;
+  
+        // Check if there's an existing image to delete
+        if (imageId) {
+          try {
+            await cloudinary.uploader.destroy(imageId);
+          } catch (cloudinaryError) {
+            console.error('Error deleting previous profile photo:', cloudinaryError);
+          }
         }
-        // Update the user fields that are present in the request body
-        Object.keys(data).forEach(key => {
-            user[key] = data[key];
-        });
-
-        // Save the updated user
-        await user.save();
-
-        res.status(200).send("User data updated successfully");
+  
+        try {
+          const newPic = await cloudinary.uploader.upload(data.profilephoto.url, {
+            folder: 'LearnDuke',
+            width: 150,
+            crop: 'scale',
+          });
+  
+          data.profilephoto = {
+            public_id: newPic.public_id,
+            url: newPic.secure_url,
+          };
+        } catch (uploadError) {
+          console.error('Error uploading new profile photo:', uploadError);
+          return res.status(500).send('Error uploading profile photo');
+        }
+      }
+  
+      // Update the user fields that are present in the request body
+      Object.keys(data).forEach(key => {
+        user[key] = data[key];
+      });
+  
+      // Save the updated user
+      await user.save();
+  
+      res.status(200).send('User data updated successfully');
     } catch (error) {
-        console.error("Error updating user data:", error);
-        res.status(500).send("Internal server error");
+      console.error('Error updating user data:', error);
+      res.status(500).send('Internal server error');
     }
-});
+  });
 
 // get job by id
 app.get('/getJobById/:jobId', async (req, res) => {
