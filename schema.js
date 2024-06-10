@@ -1,4 +1,6 @@
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
+const mongoose = require('mongoose');
+
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -50,6 +52,19 @@ const userSchema = new mongoose.Schema({
     bio: {
         type: String,
         default: ''
+    },
+    payments: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'Payment',
+        default: []
+    },
+    plans: {
+        type: [String],
+        default: []
+    },  
+    jobAllerts:{
+        type:Array,
+        default:[]
     }
 
 });
@@ -86,6 +101,46 @@ const jobSchema = new mongoose.Schema({
     email: {
         type: String,
     },
+    responsibilities: {
+        type: String,
+        default: ''
+    },
+    requirements: {
+        type: String,
+        default: ''
+    },
+    tags: {
+        type: [String],
+        default: []
+    },
+    domain: {
+        type: String,
+        default: ''
+    },
+    isReviewed: {
+        type: Boolean,
+        default: false
+    },
+    isRejected: {
+        type: Boolean,
+        default: false
+    },
+    benifits: {
+        type:[],
+        default: []
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    education: {
+        type: String,
+        default: ''
+    },
+    postedOn:{
+        type: Date,
+        default: Date.now
+    },  
 });
 
 const adminSchema = new mongoose.Schema({
@@ -98,9 +153,60 @@ const adminSchema = new mongoose.Schema({
     }
 });
 
+
+const paymentSchema = new mongoose.Schema({
+    
+    plan: {
+        type: String,
+        enum: ["Basic", "Advance", "Premium","Teacher Pro"],
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    paymentDate: {
+        type: Date,
+        default: Date.now
+    },
+    razorpay_order_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Completed', 'Failed'],
+        default: 'Pending'
+    },
+    razorpay_payment_id: {
+        type: String,
+        default: ''
+    },
+    razorpay_signature: {
+        type: String,
+        default: ''
+    },
+    user: {
+        type: "String",
+        required: true
+    },
+    expirationDate: {
+        type: Date,
+        required: true
+    },
+    transactionId: {
+        type: String,
+        required: true,
+        unique: true, // Ensures the transactionId is unique
+      },
+});
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
+const Payment = mongoose.model("Payment", paymentSchema);
 
 
-export  {Admin, Job, User};
+// export  {Admin, Job, User};
+module.exports = {Admin, Job, User, Payment};
