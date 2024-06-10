@@ -556,6 +556,28 @@ cron.schedule('0 0 * * *', () => {
     checkExpiringSubscritions();
   } );
 
+//   cron.schedule('* * * * * *', async () => {
+//     // now i need to get data of how many jobs have been posted on different domanins
+//     // and then send the email to the user
+    
+// // create a dictionary of domain and count
+//     const domainCount = {};
+//     const jobs = await Job.find();
+//     // jobs posted only today
+//     const today = new Date();
+//     const todayJobs = jobs.filter(job => job.postedOn.getDate() === today.getDate());   
+//     todayJobs.forEach(job => {
+//         if (domainCount[job.domain]) {
+//             domainCount[job.domain] += 1;
+//         } else {
+//             domainCount[job.domain] = 1;
+//         }
+//     });
+    
+//     console.log(domainCount);
+    
+
+//   });
 
 app.get('/getReviewedJobs/', async (req, res) => {
     try {

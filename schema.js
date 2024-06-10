@@ -62,6 +62,10 @@ const userSchema = new mongoose.Schema({
         type: [String],
         default: []
     },  
+    jobAllerts:{
+        type:Array,
+        default:[]
+    }
 
 });
 
