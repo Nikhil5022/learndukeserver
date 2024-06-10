@@ -62,6 +62,10 @@ const userSchema = new mongoose.Schema({
         type: [String],
         default: []
     },  
+    jobAllerts:{
+        type:Array,
+        default:[]
+    }
 
 });
 
@@ -133,7 +137,10 @@ const jobSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    
+    postedOn:{
+        type: Date,
+        default: Date.now
+    },  
 });
 
 const adminSchema = new mongoose.Schema({
