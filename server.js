@@ -556,28 +556,58 @@ cron.schedule('0 0 * * *', () => {
     checkExpiringSubscritions();
   } );
 
-//   cron.schedule('* * * * * *', async () => {
-//     // now i need to get data of how many jobs have been posted on different domanins
-//     // and then send the email to the user
+  cron.schedule('* * * * * *', async () => {
+    // now i need to get data of how many jobs have been posted on different domanins
+    // and then send the email to the user
     
-// // create a dictionary of domain and count
-//     const domainCount = {};
-//     const jobs = await Job.find();
-//     // jobs posted only today
-//     const today = new Date();
-//     const todayJobs = jobs.filter(job => job.postedOn.getDate() === today.getDate());   
-//     todayJobs.forEach(job => {
-//         if (domainCount[job.domain]) {
-//             domainCount[job.domain] += 1;
-//         } else {
-//             domainCount[job.domain] = 1;
-//         }
-//     });
+// create a dictionary of domain and count
+    const domainCount = {};
+    const jobs = await Job.find({isReviewed:true});
+    // jobs posted only today
+    const today = new Date();
+    const todayJobs = jobs.filter(job => job.postedOn.getDate() === today.getDate());   
+    todayJobs.forEach(job => {
+        if (domainCount[job.domain]) {
+            domainCount[job.domain] += 1;
+        } else {
+            domainCount[job.domain] = 1;
+        }
+    });
     
-//     console.log(domainCount);
+    console.log(domainCount);
+
+    const users = await User.find();    
+    users.forEach(async user => {
+        if (user.jobAllerts) {
+            const email = user.email;
+            let message = "Hi, here are the job alerts for today:\n\n";
+            Object.keys(domainCount).forEach(domain => {
+                message += `${domain}: ${domainCount[domain]} jobs\n`;
+            });
+
+            console.log(message);
+        }
+    });
     
 
-//   });
+  });
+
+app.post('/jobAlerts/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+        console.log(req.body.jobAlerts);
+        user.jobAllerts = req.body.jobAlerts;
+        await user.save();
+        res.send(user);
+    } catch (error) {
+        res.status(500, error);
+    }
+});
+
 
 app.get('/getReviewedJobs/', async (req, res) => {
     try {
