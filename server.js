@@ -165,12 +165,12 @@ const paymentVerification = async (req, res) => {
     if (isAuthentic) {
       user.isPremium = true;
       await user.save();
-      res.redirect(`https://learndukeserver.vercel.app/paymentsuccess`);
+      res.redirect(`https://learnduke-frontend.vercel.app//paymentsuccess`);
     } else {
-      res.redirect("https://learndukeserver.vercel.app/paymentfailed");
+      res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
     }
   } catch (e) {
-    res.redirect("https://learndukeserver.vercel.app/paymentfailed");
+    res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
   }
 };
 
