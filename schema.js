@@ -179,10 +179,6 @@ const paymentSchema = new mongoose.Schema({
         enum: ['Pending', 'Completed', 'Failed'],
         default: 'Pending'
     },
-    razorpay_payment_id: {
-        type: String,
-        default: ''
-    },
     razorpay_signature: {
         type: String,
         default: ''
