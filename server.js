@@ -128,7 +128,7 @@ const checkout = async (req, res) => {
     const options = {
       amount: Number(req.body.amount * 100),
       currency: "INR",
-      receipt: `R-ABCS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}`,
+      receipt: `R-YCYCLS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}-${new Date().toTimeString().substring(0, 8)}`,
     };
 
     const order = await instance.orders.create(options);
@@ -150,7 +150,13 @@ const paymentVerification = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body;
 
+    const {name, price, days} = req.params
+
     const user = await User.findOne({ email: req.params.id });
+
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
@@ -162,10 +168,33 @@ const paymentVerification = async (req, res) => {
     // check both signs
     const isAuthentic = expectedSign === razorpay_signature;
 
+    console.log(expectedSign, razorpay_signature, isAuthentic)
+
     if (isAuthentic) {
+      const paymentDate = new Date();
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+
+      const paymentDetails = {
+        paymentDate: paymentDate,
+        plan: name,
+        amount: price,
+        status: "Completed",
+        user: user.email,
+        razorpay_order_id: razorpay_order_id,
+        expirationDate: expirationDate,
+        transactionId: razorpay_payment_id,
+        razorpay_signature: razorpay_signature,
+      };
+
+      const payment = new Payment(paymentDetails);
+
+      user.plans.push(payment.plan);
+      user.payments.push(payment._id);
       user.isPremium = true;
+      await payment.save();
       await user.save();
-      res.redirect(`https://learnduke-frontend.vercel.app//paymentsuccess`);
+      res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
     } else {
       res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
     }
@@ -518,24 +547,24 @@ app.get("/getSimilarJobs/:jobId", async (req, res) => {
   }
 });
 
-app.post("/addPayment", async (req, res) => {
-  try {
-    const payment = new Payment(req.body);
-    const user = await User.findOne({ email: payment.user });
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    user.isPremium = true;
-    user.plans.push(payment.plan);
-    user.payments.push(payment._id);
-    await user.save();
-    await payment.save();
-    res.send(payment).redirect("https://learnduke-frontend.vercel.app/paymentsuccess");
-  } catch (error) {
-    console.log("Error adding payment:", error);
-    res.status(500).send(error);
-  }
-});
+// app.post("/addPayment", async (req, res) => {
+//   try {
+//     const payment = new Payment(req.body);
+//     const user = await User.findOne({ email: payment.user });
+//     if (!user) {
+//       return res.status(404).send("User not found");
+//     }
+//     user.isPremium = true;
+//     user.plans.push(payment.plan);
+//     user.payments.push(payment._id);
+//     await user.save();
+//     await payment.save();
+//     res.send(payment).redirect("https://learnduke-frontend.vercel.app/paymentsuccess");
+//   } catch (error) {
+//     console.log("Error adding payment:", error);
+//     res.status(500).send(error);
+//   }
+// });
 
 const checkExpiringSubscritions = async () => {
   const payments = await Payment.find({ expirationDate: new Date() });
@@ -728,7 +757,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/checkout", checkout);
-app.post("/verify/payment/:id", paymentVerification);
+app.post("/verify/payment/:id/:name/:price/:days", paymentVerification);
 app.get("/getkey", sendKey);
 
 // Start server
