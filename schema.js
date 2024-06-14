@@ -198,11 +198,124 @@ const paymentSchema = new mongoose.Schema({
       },
 });
 
+
+const mentorSchema = new mongoose.Schema({
+    profilephoto: {
+        public_id: {
+            type: String,
+            required: true,
+            default: "1234",
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+    },
+    whatsappNumber: {
+        type: String,
+        default: ''
+    },
+    phoneNumber: {
+        type: String,
+        default: ''
+    },
+    domains: {
+        type: [String],
+        default: []
+    },
+    subdomains: {
+        type: [String],
+        default: []
+    },
+    skills: {
+        type: [String],
+        default: []
+    },
+    aboutUs: {
+        type: String,
+        default: ''
+    },
+    experience: {
+        type: Number,
+        default: 0
+    },
+    education: {
+        type: String,
+        default: ''
+    },
+    locationType:{
+        type:Array,
+        default:[]
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    hourlyRate: {
+        type: Number,
+        default: 0
+    },
+    numberOfStudents: {
+        type: Number,
+        default: 0
+    },
+    availableStartTime: {
+        type: String,
+        default: ''
+    },
+    availableEndTime: {
+        type: String,
+        default: ''
+    },
+    reviews: {
+        type: [String],
+        default: []
+    },
+    aboutMentorship: {
+        type: String,
+        default: ''
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    location: {
+        type: String,
+        default: ''
+    },
+});
+
+const Reviewschema = new mongoose.Schema({
+    review: {
+        type: String,
+        required: true
+    },
+    rating: {
+        type: Number,
+        required: true
+    },
+    user: {
+        type: String,
+        required: true
+    },
+    reply: {
+        type: String,
+        default: ''
+    },
+});
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 const Payment = mongoose.model("Payment", paymentSchema);
+const Mentor = mongoose.model("Mentor", mentorSchema);
+const Review = mongoose.model("Review", Reviewschema);
 
 
 // export  {Admin, Job, User};
-module.exports = {Admin, Job, User, Payment};
+module.exports = {Admin, Job, User, Payment, Mentor, Review};

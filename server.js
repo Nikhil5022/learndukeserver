@@ -23,7 +23,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin, Payment } = require("./schema");
+const { User, Job, Admin, Payment, Mentor,Review } = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -37,7 +37,9 @@ const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
-app.use(cors());
+app.use(cors("*"));
+
+
 app.use(morgan("dev"));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(
@@ -579,7 +581,7 @@ cron.schedule("0 0 * * *", () => {
   checkExpiringSubscritions();
 });
 
-  cron.schedule('* * * * * *', async () => {
+  cron.schedule('* * * * *', async () => {
     // now i need to get data of how many jobs have been posted on different domanins
     // and then send the email to the user
     
@@ -597,7 +599,7 @@ cron.schedule("0 0 * * *", () => {
         }
     });
     
-    console.log(domainCount);
+    // console.log(domainCount);
 
     const users = await User.find();    
     users.forEach(async user => {
@@ -608,7 +610,7 @@ cron.schedule("0 0 * * *", () => {
                 message += `${domain}: ${domainCount[domain]} jobs\n`;
             });
 
-            console.log(message);
+            // console.log(message);
         }
     });
     
@@ -751,6 +753,94 @@ app.get("/getSubscriptions/:email", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
+
+// mentors section
+
+app.post("/addMentor", async (req, res) => {
+    try {
+        const mentor = new Mentor(req.body);
+        await mentor.save();
+        res.send(mentor);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+}   
+);
+
+app.get("/getMentors", async (req, res) => {    
+    try {
+        const mentors = await Mentor.find();
+        const mentorsWithUserDetails = [];
+        for (const mentor of mentors) {
+            try {
+                const user = await User.findOne({ email: mentor.email });
+                if (!user) {
+                    console.warn(`User not found for mentor with email: ${mentor.email}`);
+                } else {
+                    // Create a new object by spreading mentor data and adding name and isPremium properties
+                    const mentorWithUserDetails = {
+                        ...mentor.toObject(), // Convert Mongoose document to plain JavaScript object
+                        name: user.name,
+                        isPremium: user.isPremium,
+                    };
+                    mentorsWithUserDetails.push(mentorWithUserDetails);
+                }
+            } catch (error) {
+                console.error("Error fetching user for mentor:", error);
+            }
+        }
+        res.send(mentorsWithUserDetails);
+    } catch (error) {
+        console.error("Error fetching mentors:", error);
+        res.status(500).send(error);
+    }
+});
+
+app.get("/getMentor/:id", async (req, res) => {
+  try {
+      const mentor = await Mentor.findOne({ _id: req.params.id });
+      if (!mentor) {
+          return res.status(404).send("Mentor not found");
+      }
+
+      // Get reviews of mentor
+      const reviewsPromises = mentor.reviews.map(reviewId => Review.findOne({ _id: reviewId }));
+      const reviews = await Promise.all(reviewsPromises);
+
+      // Get data from user
+      const user = await User.findOne({ email: mentor.email });
+      if (!user) {
+          return res.status(404).send("User not found");
+      }
+
+      // Append data of user into mentor object
+      const mentorWithUserDetails = {
+          ...mentor.toObject(),
+          name: user.name,
+          isPremium: user.isPremium,
+          jobs: user.jobs,
+          linkedin: user.linkedin,
+          github: user.github,
+          bio: user.bio,
+          payments: user.payments,
+          plans: user.plans,
+          jobAllerts: user.jobAllerts,
+          reviews: reviews,
+      };
+
+      res.send(mentorWithUserDetails);
+
+  } catch (error) {
+      console.error("Error fetching mentor data:", error); // Log the error for debugging
+      res.status(500).send("An error occurred while fetching mentor data.");
+  }
+});
+
+
+
+
+
 
 app.get("/", (req, res) => {
   res.send("Home Page");
