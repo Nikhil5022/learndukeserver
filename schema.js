@@ -222,7 +222,7 @@ const mentorSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    subdomain: {
+    subDomain: {
         type: [String],
         default: []
     },
