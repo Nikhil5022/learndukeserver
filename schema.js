@@ -200,10 +200,9 @@ const paymentSchema = new mongoose.Schema({
 
 
 const mentorSchema = new mongoose.Schema({
-    profilephoto: {
+    profilePhoto: {
         public_id: {
             type: String,
-            required: true,
             default: "1234",
           },
           url: {
@@ -219,11 +218,11 @@ const mentorSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    domains: {
+    domain: {
         type: [String],
         default: []
     },
-    subdomains: {
+    subdomain: {
         type: [String],
         default: []
     },
@@ -231,7 +230,7 @@ const mentorSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    aboutUs: {
+    about: {
         type: String,
         default: ''
     },
@@ -251,7 +250,7 @@ const mentorSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    hourlyRate: {
+    hourlyFees: {
         type: Number,
         default: 0
     },
@@ -259,11 +258,11 @@ const mentorSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    availableStartTime: {
+    availabilityStartTime: {
         type: String,
         default: ''
     },
-    availableEndTime: {
+    availabilityEndTime: {
         type: String,
         default: ''
     },
@@ -271,7 +270,7 @@ const mentorSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    aboutMentorship: {
+    description: {
         type: String,
         default: ''
     },
@@ -288,6 +287,18 @@ const mentorSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    isPremium: {
+        type:  Boolean,
+        default: false,
+    },
+    payments: {
+        type: [String],
+        default: []
+    },
+    plans: {
+        type: [String],
+        default: []
+    }
 });
 
 const Reviewschema = new mongoose.Schema({

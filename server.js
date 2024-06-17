@@ -1,21 +1,3 @@
-// Load environment variables from .env file
-// import dotenv from "dotenv";
-// dotenv.config();
-// import express from "express";
-// import passport from "passport";
-// import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
-// import session from "express-session";
-// import mongoose from "mongoose";
-// import { User, Job, Admin } from "./schema.js";
-// import cors from "cors";
-// import jwt from "jsonwebtoken";
-// import morgan from "morgan";
-// import router from "./routes/paymentRoutes.js";
-// import cloudinary from "cloudinary"
-// import { v2 as cloud } from "cloudinary";
-// import bodyParser from "body-parser";
-// import fileUpload from "express-fileupload";
-
 const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
@@ -101,18 +83,6 @@ app.use(
 );
 
 const Razorpay = require("razorpay");
-// const paymentAPI = async () => {
-//     try {
-//         const instance = new Razorpay({
-//             key_id: process.env.RZP_KEY_ID,
-//             key_secret: process.env.RZP_KEY_SECRET,
-//         })
-//         console.log('Payment integration successful.')
-//         return instance;
-//     } catch (error) {
-//         console.log("Error connecting payment api : " + error)
-//     }
-// }
 
 // Passport middleware
 app.use(passport.initialize());
@@ -169,8 +139,6 @@ const paymentVerification = async (req, res) => {
 
     // check both signs
     const isAuthentic = expectedSign === razorpay_signature;
-
-    console.log(expectedSign, razorpay_signature, isAuthentic)
 
     if (isAuthentic) {
       const paymentDate = new Date();
@@ -757,11 +725,39 @@ app.get("/getSubscriptions/:email", async (req, res) => {
 
 // mentors section
 
-app.post("/addMentor", async (req, res) => {
+app.post("/addMentor/:email", async (req, res) => {
     try {
-        const mentor = new Mentor(req.body);
+      let user = await User.findOne({ email: req.params.email });
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      let mentorData = await req.body;
+
+        //cloudinary image
+        try {
+          const newPic = await cloudinary.uploader.upload(
+            mentorData.profilePhoto,
+            {
+              folder: "LearnDuke",
+              width: 150,
+              crop: "scale",
+            }
+          );
+  
+          mentorData.profilePhoto = {
+            public_id: newPic.public_id,
+            url: newPic.secure_url,
+          };
+        } catch (uploadError) {
+          console.log("Error uploading new profile photo:", uploadError);
+        }
+        const mentorDataWithEmail = { ...mentorData, email: user.email };
+
+        console.log(mentorDataWithEmail)
+        
+        const mentor = new Mentor(mentorDataWithEmail);
         await mentor.save();
-        res.send(mentor);
+        res.send("Success");
     } catch (error) {
         res.status(500).send(error);
     }
