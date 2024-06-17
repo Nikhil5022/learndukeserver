@@ -1,21 +1,3 @@
-// Load environment variables from .env file
-// import dotenv from "dotenv";
-// dotenv.config();
-// import express from "express";
-// import passport from "passport";
-// import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
-// import session from "express-session";
-// import mongoose from "mongoose";
-// import { User, Job, Admin } from "./schema.js";
-// import cors from "cors";
-// import jwt from "jsonwebtoken";
-// import morgan from "morgan";
-// import router from "./routes/paymentRoutes.js";
-// import cloudinary from "cloudinary"
-// import { v2 as cloud } from "cloudinary";
-// import bodyParser from "body-parser";
-// import fileUpload from "express-fileupload";
-
 const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
@@ -23,7 +5,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin, Payment } = require("./schema");
+const { User, Job, Admin, Payment, Mentor,Review } = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -37,7 +19,9 @@ const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
-app.use(cors());
+app.use(cors("*"));
+
+
 app.use(morgan("dev"));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(
@@ -99,18 +83,6 @@ app.use(
 );
 
 const Razorpay = require("razorpay");
-// const paymentAPI = async () => {
-//     try {
-//         const instance = new Razorpay({
-//             key_id: process.env.RZP_KEY_ID,
-//             key_secret: process.env.RZP_KEY_SECRET,
-//         })
-//         console.log('Payment integration successful.')
-//         return instance;
-//     } catch (error) {
-//         console.log("Error connecting payment api : " + error)
-//     }
-// }
 
 // Passport middleware
 app.use(passport.initialize());
@@ -168,8 +140,6 @@ const paymentVerification = async (req, res) => {
     // check both signs
     const isAuthentic = expectedSign === razorpay_signature;
 
-    console.log(expectedSign, razorpay_signature, isAuthentic)
-
     if (isAuthentic) {
       const paymentDate = new Date();
       const expirationDate = new Date();
@@ -196,12 +166,10 @@ const paymentVerification = async (req, res) => {
       await user.save();
       res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
     } else {
-      console.log("if block payment failed")
-      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
     }
   } catch (e) {
-    console.log(e)
-    res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+    res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
   }
 };
 
@@ -581,14 +549,68 @@ cron.schedule("0 0 * * *", () => {
   checkExpiringSubscritions();
 });
 
-app.get("/getReviewedJobs/", async (req, res) => {
-  try {
-    const jobs = await Job.find({ isReviewed: true });
-    res.send(jobs);
-  } catch (error) {
-    res.status(500).send(error);
-  }
+  cron.schedule('* * * * *', async () => {
+    // now i need to get data of how many jobs have been posted on different domanins
+    // and then send the email to the user
+    
+// create a dictionary of domain and count
+    const domainCount = {};
+    const jobs = await Job.find({isReviewed:true});
+    // jobs posted only today
+    const today = new Date();
+    const todayJobs = jobs.filter(job => job.postedOn.getDate() === today.getDate());   
+    todayJobs.forEach(job => {
+        if (domainCount[job.domain]) {
+            domainCount[job.domain] += 1;
+        } else {
+            domainCount[job.domain] = 1;
+        }
+    });
+    
+    // console.log(domainCount);
+
+    const users = await User.find();    
+    users.forEach(async user => {
+        if (user.jobAllerts) {
+            const email = user.email;
+            let message = "Hi, here are the job alerts for today:\n\n";
+            Object.keys(domainCount).forEach(domain => {
+                message += `${domain}: ${domainCount[domain]} jobs\n`;
+            });
+
+            // console.log(message);
+        }
+    });
+    
+
+  });
+
+app.post('/jobAlerts/:email', async (req, res) => {
+    try {
+        const email = req.params.email;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+        console.log(req.body.jobAlerts);
+        user.jobAllerts = req.body.jobAlerts;
+        await user.save();
+        res.send(user);
+    } catch (error) {
+        res.status(500, error);
+    }
 });
+
+
+app.get('/getReviewedJobs/', async (req, res) => {
+    try {
+        const jobs = await Job.find({ isReviewed: true });
+        res.send(jobs);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+}
+);
 
 app.post("/undoReview/:jobId", async (req, res) => {
   try {
@@ -699,6 +721,122 @@ app.get("/getSubscriptions/:email", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
+
+// mentors section
+
+app.post("/addMentor/:email", async (req, res) => {
+    try {
+      let user = await User.findOne({ email: req.params.email });
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      let mentorData = await req.body;
+
+        //cloudinary image
+        try {
+          const newPic = await cloudinary.uploader.upload(
+            mentorData.profilePhoto,
+            {
+              folder: "LearnDuke",
+              width: 150,
+              crop: "scale",
+            }
+          );
+  
+          mentorData.profilePhoto = {
+            public_id: newPic.public_id,
+            url: newPic.secure_url,
+          };
+        } catch (uploadError) {
+          console.log("Error uploading new profile photo:", uploadError);
+        }
+        const mentorDataWithEmail = { ...mentorData, email: user.email };
+
+        console.log(mentorDataWithEmail)
+        
+        const mentor = new Mentor(mentorDataWithEmail);
+        await mentor.save();
+        res.send("Success");
+    } catch (error) {
+        res.status(500).send(error);
+    }
+}   
+);
+
+app.get("/getMentors", async (req, res) => {    
+    try {
+        const mentors = await Mentor.find();
+        const mentorsWithUserDetails = [];
+        for (const mentor of mentors) {
+            try {
+                const user = await User.findOne({ email: mentor.email });
+                if (!user) {
+                    console.warn(`User not found for mentor with email: ${mentor.email}`);
+                } else {
+                    // Create a new object by spreading mentor data and adding name and isPremium properties
+                    const mentorWithUserDetails = {
+                        ...mentor.toObject(), // Convert Mongoose document to plain JavaScript object
+                        name: user.name,
+                        isPremium: user.isPremium,
+                    };
+                    mentorsWithUserDetails.push(mentorWithUserDetails);
+                }
+            } catch (error) {
+                console.error("Error fetching user for mentor:", error);
+            }
+        }
+        res.send(mentorsWithUserDetails);
+    } catch (error) {
+        console.error("Error fetching mentors:", error);
+        res.status(500).send(error);
+    }
+});
+
+app.get("/getMentor/:id", async (req, res) => {
+  try {
+      const mentor = await Mentor.findOne({ _id: req.params.id });
+      if (!mentor) {
+          return res.status(404).send("Mentor not found");
+      }
+
+      // Get reviews of mentor
+      const reviewsPromises = mentor.reviews.map(reviewId => Review.findOne({ _id: reviewId }));
+      const reviews = await Promise.all(reviewsPromises);
+
+      // Get data from user
+      const user = await User.findOne({ email: mentor.email });
+      if (!user) {
+          return res.status(404).send("User not found");
+      }
+
+      // Append data of user into mentor object
+      const mentorWithUserDetails = {
+          ...mentor.toObject(),
+          name: user.name,
+          isPremium: user.isPremium,
+          jobs: user.jobs,
+          linkedin: user.linkedin,
+          github: user.github,
+          bio: user.bio,
+          payments: user.payments,
+          plans: user.plans,
+          jobAllerts: user.jobAllerts,
+          reviews: reviews,
+      };
+
+      res.send(mentorWithUserDetails);
+
+  } catch (error) {
+      console.error("Error fetching mentor data:", error); // Log the error for debugging
+      res.status(500).send("An error occurred while fetching mentor data.");
+  }
+});
+
+
+
+
+
 
 app.get("/", (req, res) => {
   res.send("Home Page");

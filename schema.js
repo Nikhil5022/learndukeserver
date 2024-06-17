@@ -198,11 +198,135 @@ const paymentSchema = new mongoose.Schema({
       },
 });
 
+
+const mentorSchema = new mongoose.Schema({
+    profilePhoto: {
+        public_id: {
+            type: String,
+            default: "1234",
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+    },
+    whatsappNumber: {
+        type: String,
+        default: ''
+    },
+    phoneNumber: {
+        type: String,
+        default: ''
+    },
+    domain: {
+        type: [String],
+        default: []
+    },
+    subdomain: {
+        type: [String],
+        default: []
+    },
+    skills: {
+        type: [String],
+        default: []
+    },
+    about: {
+        type: String,
+        default: ''
+    },
+    experience: {
+        type: Number,
+        default: 0
+    },
+    education: {
+        type: String,
+        default: ''
+    },
+    locationType:{
+        type:Array,
+        default:[]
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    hourlyFees: {
+        type: Number,
+        default: 0
+    },
+    numberOfStudents: {
+        type: Number,
+        default: 0
+    },
+    availabilityStartTime: {
+        type: String,
+        default: ''
+    },
+    availabilityEndTime: {
+        type: String,
+        default: ''
+    },
+    reviews: {
+        type: [String],
+        default: []
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    languages: {
+        type: [String],
+        default: []
+    },
+    location: {
+        type: String,
+        default: ''
+    },
+    isPremium: {
+        type:  Boolean,
+        default: false,
+    },
+    payments: {
+        type: [String],
+        default: []
+    },
+    plans: {
+        type: [String],
+        default: []
+    }
+});
+
+const Reviewschema = new mongoose.Schema({
+    review: {
+        type: String,
+        required: true
+    },
+    rating: {
+        type: Number,
+        required: true
+    },
+    user: {
+        type: String,
+        required: true
+    },
+    reply: {
+        type: String,
+        default: ''
+    },
+});
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 const Payment = mongoose.model("Payment", paymentSchema);
+const Mentor = mongoose.model("Mentor", mentorSchema);
+const Review = mongoose.model("Review", Reviewschema);
 
 
 // export  {Admin, Job, User};
-module.exports = {Admin, Job, User, Payment};
+module.exports = {Admin, Job, User, Payment, Mentor, Review};
