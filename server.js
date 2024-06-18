@@ -168,10 +168,10 @@ const paymentVerification = async (req, res) => {
       await user.save();
       res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
     } else {
-      res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
+      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
     }
   } catch (e) {
-    res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
+    res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
   }
 };
 const paymentVerification2 = async (req, res) => {
@@ -235,12 +235,12 @@ const paymentVerification2 = async (req, res) => {
       await payment.save();
       await mentor.save();
       await user.save();
-      res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
+      res.redirect(`https://learnduke-frontend.vercel.app/mentor/paymentsuccess`);
     } else {
-      res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
+      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
     }
   } catch (e) {
-    res.redirect("https://learnduke-frontend.vercel.app//paymentfailed");
+    res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
   }
 };
 
