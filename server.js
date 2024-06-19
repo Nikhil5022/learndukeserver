@@ -222,13 +222,12 @@ const paymentVerification2 = async (req, res) => {
 
       const payment = new Payment(paymentDetails);
 
-      if (MENTORVALIDITY > 20000) {
+      if((MENTORVALIDITY < 20000) && (payment.plan === "Premium")){
+          mentor.plans.push("Lifetime");
+          MENTORVALIDITY += 1;
+      }else{
         mentor.plans.push(payment.plan);
       }
-      else {
-        mentor.plans.push("Lifetime");
-      }
-      MENTORVALIDITY += 1;
       mentor.payments.push(payment._id);
 
       mentor.isPremium = true;
