@@ -931,7 +931,7 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
   try {
     const mentor = await Mentor.findOne({ email: req.params.email });
     if (mentor) {
-      res.send(true);
+      res.json({success:true,mentor});
     } else {
       res.send(false);
     }

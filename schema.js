@@ -65,7 +65,11 @@ const userSchema = new mongoose.Schema({
     jobAllerts:{
         type:Array,
         default:[]
-    }
+    },
+    joiningDate: {
+        type: Date,
+        default: Date.now
+    },
 
 });
 
