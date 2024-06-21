@@ -222,10 +222,10 @@ const paymentVerification2 = async (req, res) => {
 
       const payment = new Payment(paymentDetails);
 
-      if((MENTORVALIDITY < 20000) && (payment.plan === "Premium")){
-          mentor.plans.push("Lifetime");
-          MENTORVALIDITY += 1;
-      }else{
+      if ((MENTORVALIDITY < 20000) && (payment.plan === "Premium")) {
+        mentor.plans.push("Lifetime");
+        MENTORVALIDITY += 1;
+      } else {
         mentor.plans.push(payment.plan);
       }
       mentor.payments.push(payment._id);
@@ -931,7 +931,7 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
   try {
     const mentor = await Mentor.findOne({ email: req.params.email });
     if (mentor) {
-      res.json({success:true,mentor});
+      res.json({ success: true, mentor });
     } else {
       res.send(false);
     }
@@ -940,6 +940,25 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
   }
 }
 );
+
+
+app.update("/updateMentor/:email", async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ email: req.params.email });
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+    for (let key of req.body) {
+      mentor[key] = req.body[key];
+    }
+
+    await mentor.save();
+    res.send(mentor);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
 
 
 
