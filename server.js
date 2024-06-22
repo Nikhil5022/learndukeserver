@@ -942,26 +942,6 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
 );
 
 
-app.put("/updateMentor/:email", async (req, res) => {
-  try {
-    const mentor = await Mentor.findOne({ email: req.params.email });
-    if (!mentor) {
-      console.log("not found")
-      return res.status(404).send("Mentor not found");
-    }
-    
-    
-    const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    });
-    await mentor.save();
-    res.status(200).send(newMentor);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
 
 
 
