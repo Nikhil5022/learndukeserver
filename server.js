@@ -222,10 +222,10 @@ const paymentVerification2 = async (req, res) => {
 
       const payment = new Payment(paymentDetails);
 
-      if((MENTORVALIDITY < 20000) && (payment.plan === "Premium")){
-          mentor.plans.push("Lifetime");
-          MENTORVALIDITY += 1;
-      }else{
+      if ((MENTORVALIDITY < 20000) && (payment.plan === "Premium")) {
+        mentor.plans.push("Lifetime");
+        MENTORVALIDITY += 1;
+      } else {
         mentor.plans.push(payment.plan);
       }
       mentor.payments.push(payment._id);
@@ -259,7 +259,6 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        console.log("Google profile:", profile);
         const email = profile.emails[0].value;
         const name = profile.displayName;
         const profilephoto = profile.photos[0].value;
@@ -288,8 +287,6 @@ passport.use(
           };
           await user.save();
         }
-
-        console.log("User details saved to database:", user);
         done(null, user);
       } catch (error) {
         console.error("Error saving user details to database:", error);
@@ -340,14 +337,12 @@ app.get("/logout", (req, res) => {
 
 // APIs
 app.post("/addJob", async (req, res) => {
-  console.log(req.body);
   const job = new Job(req.body);
   try {
     let user = await User.findOne({ email: req.body.email });
     if (!user) {
       return res.status(404).send("User not found");
     }
-    console.log(user);
     user.jobs.push(job._id);
 
     await user.save();
@@ -587,24 +582,6 @@ app.get("/getSimilarJobs/:jobId", async (req, res) => {
   }
 });
 
-// app.post("/addPayment", async (req, res) => {
-//   try {
-//     const payment = new Payment(req.body);
-//     const user = await User.findOne({ email: payment.user });
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-//     user.isPremium = true;
-//     user.plans.push(payment.plan);
-//     user.payments.push(payment._id);
-//     await user.save();
-//     await payment.save();
-//     res.send(payment).redirect("https://learnduke-frontend.vercel.app/paymentsuccess");
-//   } catch (error) {
-//     console.log("Error adding payment:", error);
-//     res.status(500).send(error);
-//   }
-// });
 
 const checkExpiringSubscritions = async () => {
   const payments = await Payment.find({ expirationDate: new Date() });
@@ -660,8 +637,6 @@ cron.schedule('* * * * *', async () => {
     }
   });
 
-  // console.log(domainCount);
-
   const users = await User.find();
   users.forEach(async user => {
     if (user.jobAllerts) {
@@ -670,8 +645,6 @@ cron.schedule('* * * * *', async () => {
       Object.keys(domainCount).forEach(domain => {
         message += `${domain}: ${domainCount[domain]} jobs\n`;
       });
-
-      // console.log(message);
     }
   });
 
@@ -685,7 +658,6 @@ app.post('/jobAlerts/:email', async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-    console.log(req.body.jobAlerts);
     user.jobAllerts = req.body.jobAlerts;
     await user.save();
     res.send(user);
@@ -846,8 +818,6 @@ app.post("/addMentor/:email", async (req, res) => {
     }
     const mentorDataWithEmail = { ...mentorData, email: user.email };
 
-    console.log(mentorDataWithEmail)
-
     const mentor = new Mentor(mentorDataWithEmail);
     await mentor.save();
     res.send("Success");
@@ -931,7 +901,7 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
   try {
     const mentor = await Mentor.findOne({ email: req.params.email });
     if (mentor) {
-      res.json({success:true,mentor});
+      res.json({ success: true, mentor });
     } else {
       res.send(false);
     }
@@ -941,21 +911,56 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
 }
 );
 
-
 app.put("/updateMentor/:email", async (req, res) => {
   try {
     const mentor = await Mentor.findOne({ email: req.params.email });
     if (!mentor) {
-      console.log("not found")
       return res.status(404).send("Mentor not found");
     }
-    
+
+    // if type of res.body.profilePhoto is string then upload the image to cloudinary and destroy previous image
+    if (typeof req.body.profilePhoto == 'string') {
+      const imageId = mentor.profilePhoto ? mentor.profilePhoto.public_id : null;
+
+      // Check if there's an existing image to delete
+      if (imageId && (imageId !== "1234")) {
+        try {
+          await cloudinary.uploader.destroy(imageId);
+        } catch (cloudinaryError) {
+          console.error(
+            "Error deleting previous profile photo:",
+            cloudinaryError
+          );
+        }
+      }
+
+      try {
+        const newPic = await cloudinary.uploader.upload(
+          req.body.profilePhoto,
+          {
+            folder: "LearnDuke",
+            width: 150,
+            crop: "scale",
+          }
+        );
+
+        req.body.profilePhoto = {
+          public_id: newPic.public_id,
+          url: newPic.secure_url,
+        };
+      } catch (uploadError) {
+        console.error("Error uploading new profile photo:", uploadError);
+        return res.status(500).send("Error uploading profile photo");
+      }
+    }
     
     const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
       new: true,
       runValidators: true,
       useFindAndModify: false,
     });
+
+
     await mentor.save();
     res.send(newMentor);
   } catch (error) {
