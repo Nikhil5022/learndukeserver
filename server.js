@@ -946,44 +946,6 @@ app.put("/updateMentor/:email", async (req, res) => {
   try {
     const mentor = await Mentor.findOne({ email: req.params.email });
     if (!mentor) {
-      return res.status(404).send("Mentor not found");
-    }
-    for (let key of req.body) {
-      mentor[key] = req.body[key];
-    }
-
-    await mentor.save();
-    res.send(mentor);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
-
-
-app.update("/updateMentor/:email", async (req, res) => {
-  try {
-    const mentor = await Mentor.findOne({ email: req.params.email });
-    if (!mentor) {
-      return res.status(404).send("Mentor not found");
-    }
-    for (let key of req.body) {
-      mentor[key] = req.body[key];
-    }
-
-    await mentor.save();
-    res.send(mentor);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
-
-
-app.put("/updateMentor/:email", async (req, res) => {
-  try {
-    const mentor = await Mentor.findOne({ email: req.params.email });
-    if (!mentor) {
       console.log("not found")
       return res.status(404).send("Mentor not found");
     }
@@ -994,6 +956,88 @@ app.put("/updateMentor/:email", async (req, res) => {
       runValidators: true,
       useFindAndModify: false,
     });
+    await mentor.save();
+    res.status(200).send(newMentor);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+
+
+// app.update("/updateMentor/:email", async (req, res) => {
+//   try {
+//     const mentor = await Mentor.findOne({ email: req.params.email });
+//     if (!mentor) {
+//       return res.status(404).send("Mentor not found");
+//     }
+//     for (let key of req.body) {
+//       mentor[key] = req.body[key];
+//     }
+
+//     await mentor.save();
+//     res.send(mentor);
+//   } catch (error) {
+//     res.status(500).send(error);
+//   }
+// });
+
+
+
+app.put("/updateMentor/:email", async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ email: req.params.email });
+    if (!mentor) {
+      console.log("not found")
+      return res.status(404).send("Mentor not found");
+    }
+    console.log(req.body.profilePhoto)
+    // if type of res.body.profilePhoto is string then upload the image to cloudinary and destroy previous image
+    if (typeof req.body.profilePhoto === "string") {
+      const imageId = mentor.profilePhoto ? mentor.profilePhoto.public_id : null;
+
+      // Check if there's an existing image to delete
+      if (imageId !== "1234") {
+        try {
+          await cloudinary.uploader.destroy(imageId);
+        } catch (cloudinaryError) {
+          console.error(
+            "Error deleting previous profile photo:",
+            cloudinaryError
+          );
+        }
+      }
+
+      try {
+        const newPic = await cloudinary.uploader.upload(
+          req.body.profilePhoto,
+          {
+            folder: "LearnDuke",
+            width: 150,
+            crop: "scale",
+          }
+        );
+
+        req.body.profilePhoto = {
+          public_id: newPic.public_id,
+          url: newPic.secure_url,
+        };
+      } catch (uploadError) {
+        console.error("Error uploading new profile photo:", uploadError);
+        return res.status(500).send("Error uploading profile photo");
+      }
+    }
+
+    console.log(req.body)
+
+    
+    const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    });
+
+
     await mentor.save();
     res.send(newMentor);
   } catch (error) {
