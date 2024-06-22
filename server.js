@@ -942,26 +942,26 @@ app.get('/isAlreadyMentor/:email', async (req, res) => {
 );
 
 
-app.put("/updateMentor/:email", async (req, res) => {
-  try {
-    const mentor = await Mentor.findOne({ email: req.params.email });
-    if (!mentor) {
-      console.log("not found")
-      return res.status(404).send("Mentor not found");
-    }
+// app.put("/updateMentor/:email", async (req, res) => {
+//   try {
+//     const mentor = await Mentor.findOne({ email: req.params.email });
+//     if (!mentor) {
+//       console.log("not found")
+//       return res.status(404).send("Mentor not found");
+//     }
     
     
-    const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    });
-    await mentor.save();
-    res.status(200).send(newMentor);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
+//     const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
+//       new: true,
+//       runValidators: true,
+//       useFindAndModify: false,
+//     });
+//     await mentor.save();
+//     res.status(200).send(newMentor);
+//   } catch (error) {
+//     res.status(500).send(error);
+//   }
+// });
 
 
 
@@ -991,13 +991,14 @@ app.put("/updateMentor/:email", async (req, res) => {
       console.log("not found")
       return res.status(404).send("Mentor not found");
     }
-    console.log(req.body.profilePhoto)
+
+    console.log(req.body)
     // if type of res.body.profilePhoto is string then upload the image to cloudinary and destroy previous image
-    if (typeof req.body.profilePhoto === "string") {
+    if (typeof req.body.profilePhoto == 'string') {
       const imageId = mentor.profilePhoto ? mentor.profilePhoto.public_id : null;
 
       // Check if there's an existing image to delete
-      if (imageId !== "1234") {
+      if (imageId && (imageId !== "1234")) {
         try {
           await cloudinary.uploader.destroy(imageId);
         } catch (cloudinaryError) {
