@@ -75,6 +75,12 @@ const userSchema = new mongoose.Schema({
 
 
 const jobSchema = new mongoose.Schema({
+    userName: {
+        type: String,
+    },
+    imageLink:{
+        type:String,
+    },
     title: {
         type: String,
     },
@@ -213,6 +219,9 @@ const mentorSchema = new mongoose.Schema({
             type: String,
             required: true,
           },
+    },
+    name:{
+        type: String,
     },
     whatsappNumber: {
         type: String,

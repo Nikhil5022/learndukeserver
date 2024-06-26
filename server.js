@@ -337,17 +337,24 @@ app.get("/logout", (req, res) => {
 
 // APIs
 app.post("/addJob", async (req, res) => {
-  const job = new Job(req.body);
   try {
     let user = await User.findOne({ email: req.body.email });
     if (!user) {
       return res.status(404).send("User not found");
     }
+    const job = req.body;
+    
+    job.imageLink = user.profilephoto.url;
+    job.userName = user.name;
+
+    console.log(job)
+    
+    const newJob = await Job(job); 
     user.jobs.push(job._id);
 
     await user.save();
-    await job.save();
-    res.send(job);
+    await newJob.save();
+    res.send(newJob);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -909,7 +916,7 @@ app.post("/addMentor/:email", async (req, res) => {
       return res.status(404).send("User not found");
     }
     let mentorData = await req.body;
-
+    
     //cloudinary image
     try {
       const newPic = await cloudinary.uploader.upload(mentorData.profilePhoto, {
@@ -925,7 +932,7 @@ app.post("/addMentor/:email", async (req, res) => {
     } catch (uploadError) {
       console.log("Error uploading new profile photo:", uploadError);
     }
-    const mentorDataWithEmail = { ...mentorData, email: user.email };
+    const mentorDataWithEmail = { ...mentorData, email: user.email, name: user.name};
 
     const mentor = new Mentor(mentorDataWithEmail);
     await mentor.save();
@@ -938,26 +945,31 @@ app.post("/addMentor/:email", async (req, res) => {
 app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
-    const mentorsWithUserDetails = [];
-    for (const mentor of mentors) {
-      try {
-        const user = await User.findOne({ email: mentor.email });
-        if (!user) {
-          console.warn(`User not found for mentor with email: ${mentor.email}`);
-        } else {
-          // Create a new object by spreading mentor data and adding name and isPremium properties
-          const mentorWithUserDetails = {
-            ...mentor.toObject(), // Convert Mongoose document to plain JavaScript object
-            name: user.name,
-            isPremium: user.isPremium,
-          };
-          mentorsWithUserDetails.push(mentorWithUserDetails);
-        }
-      } catch (error) {
-        console.error("Error fetching user for mentor:", error);
-      }
+    if(!mentors){
+      console.log("No mentors found")
+      res.status(201).send("No mentors found")
     }
-    res.send(mentorsWithUserDetails);
+    // const mentorsWithUserDetails = [];
+    // for (const mentor of mentors) {
+    //   try {
+    //     const user = await User.findOne({ email: mentor.email });
+    //     if (!user) {
+    //       console.warn(`User not found for mentor with email: ${mentor.email}`);
+    //     } else {
+    //       // Create a new object by spreading mentor data and adding name and isPremium properties
+    //       const mentorWithUserDetails = {
+    //         ...mentor.toObject(), // Convert Mongoose document to plain JavaScript object
+    //         name: user.name,
+    //         isPremium: user.isPremium,
+    //       };
+    //       mentorsWithUserDetails.push(mentorWithUserDetails);
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching user for mentor:", error);
+    //   }
+    // }
+    
+    res.send(mentors);
   } catch (error) {
     console.error("Error fetching mentors:", error);
     res.status(500).send(error);
