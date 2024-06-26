@@ -343,13 +343,13 @@ app.post("/addJob", async (req, res) => {
       return res.status(404).send("User not found");
     }
     const job = req.body;
-    
+
     job.imageLink = user.profilephoto.url;
     job.userName = user.name;
 
     console.log(job)
-    
-    const newJob = await Job(job); 
+
+    const newJob = await Job(job);
     user.jobs.push(job._id);
 
     await user.save();
@@ -361,80 +361,18 @@ app.post("/addJob", async (req, res) => {
 });
 
 app.get("/getJobs", async (req, res) => {
+
+
   try {
-    const {
-      search,
-      location,
-      jobType,
-      domain,
-      education,
-      page = 1,
-      limit = 8,
-    } = req.query;
+    const jobs = await Job.find();
+    res.send(jobs);
 
-    const query = {};
-    if (search) {
-      query.title = { $search: search };
-    }
-    if (location) {
-      query.location = location;
-    }
-    if (jobType) {
-      query.jobType = jobType;
-    }
-    console.log("Prev query object:", query);
-    
-    const orConditions = [];
-    
-    if (domain) {
-        orConditions.push(...domain.map((d) => ({ domain: d })));
-    }
-      console.log("Next query object:", query);
-    if (education) {
-        orConditions.push(...education.map((e) => ({ education: e })));
-    }
-
-    // If there are any $or conditions, add them to the query
-    if (orConditions.length > 0) {
-      query.$or = orConditions;
-    }
-    console.log("Final query object:", query);
-    // if (domain) {
-    //   if (Array.isArray(domain)) {
-    //     query.$or = domain.map((d) => ({ domain: d }));
-    //   } else {
-    //     query.domain = domain;
-    //   }
-    // }
-    // if (education) {
-    //   if (Array.isArray(education)) {
-    //     query.$or = [
-    //       ...(query.$or || []),
-    //       ...education.map((e) => ({ education: e })),
-    //     ];
-    //   } else {
-    //     query.education = education;
-    //   }
-    // }
-    try {
-      const jobs = await Job.find(query)
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit));
-
-      const totalJobs = await Job.countDocuments(query);
-
-      res.status(200).json({
-        jobs,
-        totalJobs,
-        totalPages: Math.ceil(totalJobs / limit),
-        currentPage: parseInt(page),
-      });
-    } catch (error) {
-      res.status(500).send(error);
-    }
-  } catch (error) {
+  }
+  catch (error) {
     res.status(500).send(error);
   }
+
+
 });
 
 app.get("/getUser/:email", async (req, res) => {
@@ -746,33 +684,33 @@ app.get("/getReviewedJobs", async (req, res) => {
     let query = {};
     if (title) {
       query.title = { $regex: new RegExp(title, "i") };
-      
+
     }
     if (typeof location === "string" && location.trim() !== "") {
       query.location = { $regex: new RegExp(location.trim(), "i") };
-      
+
     }
     if (typeof jobType === "string" && jobType.trim() !== "") {
       query.jobType = { $regex: new RegExp(jobType.trim(), "i") };
-      
+
     }
     query.isReviewed = true;
-    
+
     const orConditions = [];
-    
+
     if (domain) {
       orConditions.push(...domain.map((d) => ({ domain: d })));
-      
+
     }
     if (education) {
       orConditions.push(...education.map((e) => ({ education: e })));
-      
+
     }
-    
+
     // If there are any $or conditions, add them to the query
     if (orConditions.length > 0) {
       query.$or = orConditions;
-      
+
     }
 
     try {
@@ -916,7 +854,7 @@ app.post("/addMentor/:email", async (req, res) => {
       return res.status(404).send("User not found");
     }
     let mentorData = await req.body;
-    
+
     //cloudinary image
     try {
       const newPic = await cloudinary.uploader.upload(mentorData.profilePhoto, {
@@ -932,10 +870,10 @@ app.post("/addMentor/:email", async (req, res) => {
     } catch (uploadError) {
       console.log("Error uploading new profile photo:", uploadError);
     }
-    const mentorDataWithEmail = { ...mentorData, email: user.email, name: user.name};
+    const mentorDataWithEmail = { ...mentorData, email: user.email, name: user.name };
     const mentor = new Mentor(mentorDataWithEmail);
     await mentor.save();
-    res.send("Success");
+    res.send(mentor);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -944,7 +882,7 @@ app.post("/addMentor/:email", async (req, res) => {
 app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
-    if(!mentors){
+    if (!mentors) {
       console.log("No mentors found")
       res.status(201).send("No mentors found")
     }
@@ -967,7 +905,7 @@ app.get("/getMentors", async (req, res) => {
     //     console.error("Error fetching user for mentor:", error);
     //   }
     // }
-    
+
     res.send(mentors);
   } catch (error) {
     console.error("Error fetching mentors:", error);
@@ -1096,12 +1034,22 @@ app.get('/getMentor', async (req, res) => {
 
   try {
     // Construct query conditionally
-    
+
     let query = {};
 
     if (search) {
-      query.skills = { $regex: new RegExp(search, 'i') };
+      query={
+        $or:[
+          {name: { $regex: new RegExp(search, 'i') }},
+          {domain: { $regex: new RegExp(search, 'i') }},
+          {subDomain: { $elemMatch: { $in: [new RegExp(search, 'i')] } }},
+          {skills: { $elemMatch: { $in: [new RegExp(search, 'i')] } }},
+
+        ]
+      }
     }
+
+   
 
     if (domain !== "All Domains") {
       query.domain = { $regex: new RegExp(domain, 'i') };
@@ -1111,8 +1059,8 @@ app.get('/getMentor', async (req, res) => {
       query.subDomain = { $elemMatch: { $in: subDomains.map(sub => new RegExp(sub, 'i')) } };
     }
 
-   
-  
+
+
 
     const totalMentors = await Mentor.countDocuments(query).exec();
     const mentors = await Mentor.find(query).limit(limit).skip(startIndex).exec();
