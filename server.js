@@ -734,32 +734,38 @@ app.post("/jobAlerts/:email", async (req, res) => {
 
 app.get("/getReviewedJobs", async (req, res) => {
   try {
-    const { title, location, jobType, domain, education, page = 1, limit = 8 } = req.query;
+    const { title, location, jobType, domain, education, page = 1, limit = 2 } = req.query;
 
     let query = {};
     if (title) {
       query.title = { $regex: new RegExp(title, "i") };
+      
     }
     if (typeof location === "string" && location.trim() !== "") {
       query.location = { $regex: new RegExp(location.trim(), "i") };
+      
     }
     if (typeof jobType === "string" && jobType.trim() !== "") {
       query.jobType = { $regex: new RegExp(jobType.trim(), "i") };
+      
     }
     query.isReviewed = true;
-
+    
     const orConditions = [];
     
     if (domain) {
-        orConditions.push(...domain.map((d) => ({ domain: d })));
+      orConditions.push(...domain.map((d) => ({ domain: d })));
+      
     }
     if (education) {
-        orConditions.push(...education.map((e) => ({ education: e })));
+      orConditions.push(...education.map((e) => ({ education: e })));
+      
     }
-
+    
     // If there are any $or conditions, add them to the query
     if (orConditions.length > 0) {
       query.$or = orConditions;
+      
     }
 
     try {
