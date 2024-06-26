@@ -222,6 +222,7 @@ const mentorSchema = new mongoose.Schema({
     },
     name:{
         type: String,
+        default: ''
     },
     whatsappNumber: {
         type: String,

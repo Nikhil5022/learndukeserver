@@ -933,7 +933,6 @@ app.post("/addMentor/:email", async (req, res) => {
       console.log("Error uploading new profile photo:", uploadError);
     }
     const mentorDataWithEmail = { ...mentorData, email: user.email, name: user.name};
-
     const mentor = new Mentor(mentorDataWithEmail);
     await mentor.save();
     res.send("Success");
