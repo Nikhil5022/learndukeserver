@@ -1025,6 +1025,68 @@ app.put("/updateMentor/:email", async (req, res) => {
   }
 });
 
+
+app.get('/getMentor', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const startIndex = (page - 1) * limit;
+
+  const search = req.query.search || "";
+  const domain = req.query.domain || "All Domains";
+  const subDomains = req.query.subDomain ? req.query.subDomain.split(',') : [];
+
+  try {
+    // Construct query conditionally
+    
+    let query = {};
+
+    if (search) {
+      query.skills = { $regex: new RegExp(search, 'i') };
+    }
+
+    if (domain !== "All Domains") {
+      query.domain = { $regex: new RegExp(domain, 'i') };
+    }
+
+    if (subDomains.length > 0) {
+      query.subDomain = { $elemMatch: { $in: subDomains.map(sub => new RegExp(sub, 'i')) } };
+    }
+
+   
+  
+
+    const totalMentors = await Mentor.countDocuments(query).exec();
+    const mentors = await Mentor.find(query).limit(limit).skip(startIndex).exec();
+
+    // Fetch user details
+    const mentorsWithUserDetails = await Promise.all(mentors.map(async mentor => {
+      const user = await User.findOne({ email: mentor.email });
+      if (user) {
+        return {
+          ...mentor.toObject(),
+          name: user.name,
+          isPremium: user.isPremium,
+        };
+      }
+    }));
+
+    const totalPages = Math.ceil(totalMentors / limit);
+
+    res.send({
+      startIndex,
+      totalMentors,
+      totalPages,
+      mentors: mentorsWithUserDetails.filter(Boolean), // Filter out null or undefined values
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
+
+
+
 app.get("/", (req, res) => {
   res.send("Home Page");
 });
