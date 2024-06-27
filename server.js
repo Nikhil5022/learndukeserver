@@ -679,7 +679,7 @@ app.post("/jobAlerts/:email", async (req, res) => {
 
 app.get("/getReviewedJobs", async (req, res) => {
   try {
-    const { title, location, jobType, domain, education, page = 1, limit = 2 } = req.query;
+    const { title, location, jobType, domain, education, page = 1, limit = 8 } = req.query;
 
     let query = {};
     if (title) {
