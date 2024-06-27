@@ -1062,28 +1062,19 @@ app.get('/getMentor', async (req, res) => {
 
 
 
-    const totalMentors = await Mentor.countDocuments(query).exec();
+    // const totalMentors = await Mentor.countDocuments(query).exec();
     const mentors = await Mentor.find(query).limit(limit).skip(startIndex).exec();
+    const premiummentor = mentors.filter(mentor => mentor.isPremium === true); 
 
-    // Fetch user details
-    const mentorsWithUserDetails = await Promise.all(mentors.map(async mentor => {
-      const user = await User.findOne({ email: mentor.email });
-      if (user) {
-        return {
-          ...mentor.toObject(),
-          name: user.name,
-          isPremium: user.isPremium,
-        };
-      }
-    }));
+    
 
-    const totalPages = Math.ceil(totalMentors / limit);
+    const totalPages = Math.ceil(premiummentor.length / limit);
 
     res.send({
       startIndex,
-      totalMentors,
+      "totalmentor":premiummentor.length,
       totalPages,
-      mentors: mentorsWithUserDetails.filter(Boolean), // Filter out null or undefined values
+      mentors: premiummentor.filter(Boolean), // Filter out null or undefined values
     });
   } catch (error) {
     res.status(500).send(error.message);
