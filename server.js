@@ -716,7 +716,7 @@ app.get("/getReviewedJobs", async (req, res) => {
     }
 
     try {
-      const jobs = await Job.find(query)
+      const jobs = await Job.find(query).sort({postedOn: -1})
         .skip((page - 1) * limit)
         .limit(parseInt(limit));
       const totalJobs = await Job.countDocuments(query);
@@ -1065,7 +1065,7 @@ app.get('/getMentor', async (req, res) => {
 
 
     // const totalMentors = await Mentor.countDocuments(query).exec();
-    const mentors = await Mentor.find(query).limit(limit).skip(startIndex).exec();
+    const mentors = await Mentor.find(query).sort({postedOn: -1}).limit(limit).skip(startIndex).exec();
     const premiummentor = mentors.filter(mentor => mentor.isPremium === true); 
 
     
