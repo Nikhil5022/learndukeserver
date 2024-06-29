@@ -312,6 +312,10 @@ const mentorSchema = new mongoose.Schema({
     plans: {
         type: [String],
         default: []
+    },
+    postedOn: {
+        type: Date,
+        default: Date.now,
     }
 });
 
