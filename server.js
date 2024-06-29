@@ -350,7 +350,8 @@ app.post("/addJob", async (req, res) => {
     console.log(job)
 
     const newJob = await Job(job);
-    user.jobs.push(job._id);
+
+    user.jobs.push(newJob._id);
 
     await user.save();
     await newJob.save();
@@ -417,6 +418,7 @@ app.get("/getJobs/:email", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
+    console.log(user)
     let jobs = [];
     for (let i = 0; i < user.jobs.length; i++) {
       const job = await Job.findOne({ _id: user.jobs[i] });
