@@ -19,6 +19,9 @@ const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
+const axios = require("axios");
+const uniqid = require("uniqid");
+const sha256 = require("sha256");
 app.use(cors("*"));
 
 let MENTORVALIDITY = 0;
@@ -93,155 +96,155 @@ const instance = new Razorpay({
   key_secret: process.env.RZP_KEY_SECRET,
 });
 
-const checkout = async (req, res) => {
-  try {
-    const options = {
-      amount: Number(req.body.amount * 100),
-      currency: "INR",
-      receipt: `R-YCYCLS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}-${new Date()
-        .toTimeString()
-        .substring(0, 8)}`,
-    };
+// const checkout = async (req, res) => {
+//   try {
+//     const options = {
+//       amount: Number(req.body.amount * 100),
+//       currency: "INR",
+//       receipt: `R-YCYCLS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}-${new Date()
+//         .toTimeString()
+//         .substring(0, 8)}`,
+//     };
 
-    const order = await instance.orders.create(options);
+//     const order = await instance.orders.create(options);
 
-    await res.status(200).json({
-      success: true,
-      order,
-    });
-  } catch (e) {
-    res.status(400).json({
-      success: false,
-      message: e.message,
-    });
-  }
-};
+//     await res.status(200).json({
+//       success: true,
+//       order,
+//     });
+//   } catch (e) {
+//     res.status(400).json({
+//       success: false,
+//       message: e.message,
+//     });
+//   }
+// };
 
-const paymentVerification = async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
+// const paymentVerification = async (req, res) => {
+//   try {
+//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+//       req.body;
 
-    const { name, price, days } = req.params;
+//     const { name, price, days } = req.params;
 
-    const user = await User.findOne({ email: req.params.id });
+//     const user = await User.findOne({ email: req.params.id });
 
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
+//     if (!user) {
+//       return res.status(404).send("User not found");
+//     }
 
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
-    const expectedSign = crypto
-      .createHmac("sha256", process.env.RZP_KEY_SECRET)
-      .update(sign.toString())
-      .digest("hex");
+//     const expectedSign = crypto
+//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
+//       .update(sign.toString())
+//       .digest("hex");
 
-    // check both signs
-    const isAuthentic = expectedSign === razorpay_signature;
+//     // check both signs
+//     const isAuthentic = expectedSign === razorpay_signature;
 
-    if (isAuthentic) {
-      const paymentDate = new Date();
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+//     if (isAuthentic) {
+//       const paymentDate = new Date();
+//       const expirationDate = new Date();
+//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
 
-      const paymentDetails = {
-        paymentDate: paymentDate,
-        plan: name,
-        amount: price,
-        status: "Completed",
-        user: user.email,
-        razorpay_order_id: razorpay_order_id,
-        expirationDate: expirationDate,
-        transactionId: razorpay_payment_id,
-        razorpay_signature: razorpay_signature,
-      };
+//       const paymentDetails = {
+//         paymentDate: paymentDate,
+//         plan: name,
+//         amount: price,
+//         status: "Completed",
+//         user: user.email,
+//         razorpay_order_id: razorpay_order_id,
+//         expirationDate: expirationDate,
+//         transactionId: razorpay_payment_id,
+//         razorpay_signature: razorpay_signature,
+//       };
 
-      const payment = new Payment(paymentDetails);
+//       const payment = new Payment(paymentDetails);
 
-      user.plans.push(payment.plan);
-      user.payments.push(payment._id);
-      user.isPremium = true;
-      await payment.save();
-      await user.save();
-      res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
-    } else {
-      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-    }
-  } catch (e) {
-    res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-  }
-};
-const paymentVerification2 = async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
+//       user.plans.push(payment.plan);
+//       user.payments.push(payment._id);
+//       user.isPremium = true;
+//       await payment.save();
+//       await user.save();
+//       res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
+//     } else {
+//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+//     }
+//   } catch (e) {
+//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+//   }
+// };
+// const paymentVerification2 = async (req, res) => {
+//   try {
+//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+//       req.body;
 
-    const { name, price, days } = req.params;
+//     const { name, price, days } = req.params;
 
-    const user = await User.findOne({ email: req.params.id });
+//     const user = await User.findOne({ email: req.params.id });
 
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
+//     if (!user) {
+//       return res.status(404).send("User not found");
+//     }
 
-    const mentor = await Mentor.findOne({ email: user.email });
+//     const mentor = await Mentor.findOne({ email: user.email });
 
-    if (!mentor) {
-      return res.status(404).send("Mentor not found");
-    }
+//     if (!mentor) {
+//       return res.status(404).send("Mentor not found");
+//     }
 
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
 
-    const expectedSign = crypto
-      .createHmac("sha256", process.env.RZP_KEY_SECRET)
-      .update(sign.toString())
-      .digest("hex");
+//     const expectedSign = crypto
+//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
+//       .update(sign.toString())
+//       .digest("hex");
 
-    // check both signs
-    const isAuthentic = expectedSign === razorpay_signature;
+//     // check both signs
+//     const isAuthentic = expectedSign === razorpay_signature;
 
-    if (isAuthentic) {
-      const paymentDate = new Date();
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+//     if (isAuthentic) {
+//       const paymentDate = new Date();
+//       const expirationDate = new Date();
+//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
 
-      const paymentDetails = {
-        paymentDate: paymentDate,
-        plan: name,
-        amount: price,
-        status: "Completed",
-        user: user.email,
-        razorpay_order_id: razorpay_order_id,
-        expirationDate: expirationDate,
-        transactionId: razorpay_payment_id,
-        razorpay_signature: razorpay_signature,
-      };
+//       const paymentDetails = {
+//         paymentDate: paymentDate,
+//         plan: name,
+//         amount: price,
+//         status: "Completed",
+//         user: user.email,
+//         razorpay_order_id: razorpay_order_id,
+//         expirationDate: expirationDate,
+//         transactionId: razorpay_payment_id,
+//         razorpay_signature: razorpay_signature,
+//       };
 
-      const payment = new Payment(paymentDetails);
+//       const payment = new Payment(paymentDetails);
 
-      if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
-        mentor.plans.push("Lifetime");
-        MENTORVALIDITY += 1;
-      } else {
-        mentor.plans.push(payment.plan);
-      }
-      mentor.payments.push(payment._id);
+//       if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
+//         mentor.plans.push("Lifetime");
+//         MENTORVALIDITY += 1;
+//       } else {
+//         mentor.plans.push(payment.plan);
+//       }
+//       mentor.payments.push(payment._id);
 
-      mentor.isPremium = true;
-      await payment.save();
-      await mentor.save();
-      await user.save();
-      res.redirect(
-        `https://learnduke-frontend.vercel.app/mentor/paymentsuccess`
-      );
-    } else {
-      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-    }
-  } catch (e) {
-    res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-  }
-};
+//       mentor.isPremium = true;
+//       await payment.save();
+//       await mentor.save();
+//       await user.save();
+//       res.redirect(
+//         `https://learnduke-frontend.vercel.app/mentor/paymentsuccess`
+//       );
+//     } else {
+//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+//     }
+//   } catch (e) {
+//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+//   }
+// };
 
 const sendKey = async (req, res) => {
   res.status(200).json({
@@ -347,7 +350,7 @@ app.post("/addJob", async (req, res) => {
     job.imageLink = user.profilephoto.url;
     job.userName = user.name;
 
-    console.log(job)
+    console.log(job);
 
     const newJob = await Job(job);
 
@@ -362,18 +365,12 @@ app.post("/addJob", async (req, res) => {
 });
 
 app.get("/getJobs", async (req, res) => {
-
-
   try {
     const jobs = await Job.find();
     res.send(jobs);
-
-  }
-  catch (error) {
+  } catch (error) {
     res.status(500).send(error);
   }
-
-
 });
 
 app.get("/getUser/:email", async (req, res) => {
@@ -418,7 +415,7 @@ app.get("/getJobs/:email", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-    console.log(user)
+    console.log(user);
     let jobs = [];
     for (let i = 0; i < user.jobs.length; i++) {
       const job = await Job.findOne({ _id: user.jobs[i] });
@@ -681,20 +678,25 @@ app.post("/jobAlerts/:email", async (req, res) => {
 
 app.get("/getReviewedJobs", async (req, res) => {
   try {
-    const { title, location, jobType, domain, education, page = 1, limit = 8 } = req.query;
+    const {
+      title,
+      location,
+      jobType,
+      domain,
+      education,
+      page = 1,
+      limit = 8,
+    } = req.query;
 
     let query = {};
     if (title) {
       query.title = { $regex: new RegExp(title, "i") };
-
     }
     if (typeof location === "string" && location.trim() !== "") {
       query.location = { $regex: new RegExp(location.trim(), "i") };
-
     }
     if (typeof jobType === "string" && jobType.trim() !== "") {
       query.jobType = { $regex: new RegExp(jobType.trim(), "i") };
-
     }
     query.isReviewed = true;
 
@@ -702,21 +704,19 @@ app.get("/getReviewedJobs", async (req, res) => {
 
     if (domain) {
       orConditions.push(...domain.map((d) => ({ domain: d })));
-
     }
     if (education) {
       orConditions.push(...education.map((e) => ({ education: e })));
-
     }
 
     // If there are any $or conditions, add them to the query
     if (orConditions.length > 0) {
       query.$or = orConditions;
-
     }
 
     try {
-      const jobs = await Job.find(query).sort({postedOn: -1})
+      const jobs = await Job.find(query)
+        .sort({ postedOn: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit));
       const totalJobs = await Job.countDocuments(query);
@@ -872,7 +872,11 @@ app.post("/addMentor/:email", async (req, res) => {
     } catch (uploadError) {
       console.log("Error uploading new profile photo:", uploadError);
     }
-    const mentorDataWithEmail = { ...mentorData, email: user.email, name: user.name };
+    const mentorDataWithEmail = {
+      ...mentorData,
+      email: user.email,
+      name: user.name,
+    };
     const mentor = new Mentor(mentorDataWithEmail);
     await mentor.save();
     res.send(mentor);
@@ -885,8 +889,8 @@ app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
     if (!mentors) {
-      console.log("No mentors found")
-      res.status(201).send("No mentors found")
+      console.log("No mentors found");
+      res.status(201).send("No mentors found");
     }
     // const mentorsWithUserDetails = [];
     // for (const mentor of mentors) {
@@ -1024,15 +1028,14 @@ app.put("/updateMentor/:email", async (req, res) => {
   }
 });
 
-
-app.get('/getMentor', async (req, res) => {
+app.get("/getMentor", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const startIndex = (page - 1) * limit;
 
   const search = req.query.search || "";
   const domain = req.query.domain || "All Domains";
-  const subDomains = req.query.subDomain ? req.query.subDomain.split(',') : [];
+  const subDomains = req.query.subDomain ? req.query.subDomain.split(",") : [];
 
   try {
     // Construct query conditionally
@@ -1040,41 +1043,39 @@ app.get('/getMentor', async (req, res) => {
     let query = {};
 
     if (search) {
-      query={
-        $or:[
-          {name: { $regex: new RegExp(search, 'i') }},
-          {domain: { $regex: new RegExp(search, 'i') }},
-          {subDomain: { $elemMatch: { $in: [new RegExp(search, 'i')] } }},
-          {skills: { $elemMatch: { $in: [new RegExp(search, 'i')] } }},
-
-        ]
-      }
+      query = {
+        $or: [
+          { name: { $regex: new RegExp(search, "i") } },
+          { domain: { $regex: new RegExp(search, "i") } },
+          { subDomain: { $elemMatch: { $in: [new RegExp(search, "i")] } } },
+          { skills: { $elemMatch: { $in: [new RegExp(search, "i")] } } },
+        ],
+      };
     }
 
-   
-
     if (domain !== "All Domains") {
-      query.domain = { $regex: new RegExp(domain, 'i') };
+      query.domain = { $regex: new RegExp(domain, "i") };
     }
 
     if (subDomains.length > 0) {
-      query.subDomain = { $elemMatch: { $in: subDomains.map(sub => new RegExp(sub, 'i')) } };
+      query.subDomain = {
+        $elemMatch: { $in: subDomains.map((sub) => new RegExp(sub, "i")) },
+      };
     }
 
-
-
-
     // const totalMentors = await Mentor.countDocuments(query).exec();
-    const mentors = await Mentor.find(query).sort({postedOn: -1}).limit(limit).skip(startIndex).exec();
-    const premiummentor = mentors.filter(mentor => mentor.isPremium === true); 
-
-    
+    const mentors = await Mentor.find(query)
+      .sort({ postedOn: -1 })
+      .limit(limit)
+      .skip(startIndex)
+      .exec();
+    const premiummentor = mentors.filter((mentor) => mentor.isPremium === true);
 
     const totalPages = Math.ceil(premiummentor.length / limit);
 
     res.send({
       startIndex,
-      "totalmentor":premiummentor.length,
+      totalmentor: premiummentor.length,
       totalPages,
       mentors: premiummentor.filter(Boolean), // Filter out null or undefined values
     });
@@ -1083,17 +1084,163 @@ app.get('/getMentor', async (req, res) => {
   }
 });
 
+//redirect api after phonepe payment
+app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res) => {
+    const { merchantTransactionId, name, days , mail
+      //  isMentor, user, 
+      } = req.params;
 
+    const user = await User.findOne({email : mail})
+    if (merchantTransactionId) {
+      const xVerify =
+        sha256(
+          `/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}${process.env.PHONE_PE_SALT_KEY}`
+        ) +
+        "###" +
+        process.env.PHONE_PE_SALT_INDEX;
 
+      const options = {
+        method: "get",
+        url: `${process.env.PHONE_PE_HOST_URL}/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}`,
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+          "X-MERCHANT-ID": merchantTransactionId,
+          "X-VERIFY": xVerify,
+        },
+      };
+      axios
+        .request(options)
+        .then(async function (response) {
+          console.log(response.data)
+          const paymentDate = new Date();
+          const expirationDate = new Date();
+          expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+          
+          const paymentDetails = {
+            paymentDate: paymentDate,
+            plan: name,
+            amount: parseInt(response.data?.data.amount) / 100, 
+            status: response.data?.code,
+            user: mail,
+            transactionId: response.data?.data.transactionId,
+            merchantTransactionId: merchantTransactionId,
+            expirationDate: expirationDate,
+            paymentMethod: response.data?.data?.paymentInstrument.type,
+            pgTransactionId: response.data?.data?.paymentInstrument.pgTransactionId,
+            arn: response.data?.data.paymentInstrument.arn,
+          };
+          const payment = new Payment(paymentDetails);
+            try {
+              await payment.save();
+              console.log('Payment saved successfully.');
+            } catch (error) {
+              console.error('Error saving payment:', error);
+              // Handle the error appropriately
+            }
+          // console.log(payment)
+          if (response.data.code === "PAYMENT_SUCCESS") {
+            // if (isMentor == "true") {
+            //   const mentor = await Mentor.findOne({ email: user.email });
+            //   if (!mentor) {
+            //     return res.status(404).send("Mentor not found");
+            //   }
+            //   if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
+            //     mentor.plans.push("Lifetime");
+            //     MENTORVALIDITY += 1;
+            //   } else {
+            //     mentor.plans.push(payment.plan);
+            //   }
+            //   mentor.payments.push(payment._id);
+            //   mentor.isPremium = true;
+            //   await payment.save();
+            //   await mentor.save();
+            // } else {
+              user.plans.push(payment.plan);
+              user.payments.push(payment._id);
+              user.isPremium = true;
+              await user.save();
+          // }
+              res.redirect(
+                `https://learnduke-frontend.vercel.app/paymentsuccess`
+              );
+          } else if (response.data.code === "PAYMENT_ERROR") {
+            res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+          }
+        })
+        .catch(function (error) {
+          res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+        });
+    } else {
+      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+    }
+  }
+);
 
+app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
+
+  // const { isMentor, name, price, days, phone } = req.params;
+  const {price,name,days,mail } = req.params;
+  const user = await User.findOne({ email: mail });
+  if(!user){
+    res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+  }
+  const endPoint = "/pg/v1/pay";
+
+  const merchantTransactionId = uniqid();
+  const userId = "1234";
+
+  const payload = {
+    merchantId: process.env.PHONE_PE_MERCHANT_ID,
+    merchantTransactionId: merchantTransactionId,
+    merchantUserId: userId,
+    amount: parseInt(price)* 100, // in paise
+    redirectUrl: `http://localhost:3000/redirect-url/${merchantTransactionId}/${name}/${days}/${user.email}`,
+    redirectMode: "REDIRECT",
+    mobileNumber: "1111111111", // to be clarified.
+    paymentInstrument: {
+      type: "PAY_PAGE",
+    },
+  };
+
+  const bufferObj = Buffer.from(JSON.stringify(payload), "utf8");
+
+  const base64EncodedPayload = bufferObj.toString("base64");
+
+  const xVerify =
+    sha256(base64EncodedPayload + endPoint + process.env.PHONE_PE_SALT_KEY) +
+    "###" +
+    process.env.PHONE_PE_SALT_INDEX;
+
+  const options = {
+    method: "post",
+    url: `${process.env.PHONE_PE_HOST_URL}${endPoint}`,
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      "X-VERIFY": xVerify,
+    },
+    data: {
+      request: base64EncodedPayload,
+    },
+  };
+  axios
+    .request(options)
+    .then(function (response) {
+      res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
+    })
+    .catch(function (error) {
+      res.status(500).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+    });
+});
 
 app.get("/", (req, res) => {
   res.send("Home Page");
 });
 
-app.post("/checkout", checkout);
-app.post("/verify/payment/:id/:name/:price/:days", paymentVerification);
-app.post("/verify/payment/mentor/:id/:name/:price/:days", paymentVerification2);
+// app.post("/checkout", checkout);
+// app.post("/verify/payment/:id/:name/:price/:days", paymentVerification);
+// app.post("/verify/payment/mentor/:id/:name/:price/:days", paymentVerification2);
 app.get("/getkey", sendKey);
 
 // Start server
