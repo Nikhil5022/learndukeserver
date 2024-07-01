@@ -379,7 +379,7 @@ app.get("/getJobs", async (req, res) => {
 app.get("/getUser/:email", async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
-    res.send(user);
+    res.status(200).send(user);
   } catch (error) {
     res.status(500).send(error);
   }
