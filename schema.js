@@ -165,47 +165,47 @@ const adminSchema = new mongoose.Schema({
 
 
 const paymentSchema = new mongoose.Schema({
-    
-    plan: {
-        type: String,
-        enum: ["Basic", "Advance", "Premium","Teacher Pro"],
-        required: true
-    },
-    amount: {
-        type: Number,
-        required: true
-    },
-    paymentDate: {
-        type: Date,
-        default: Date.now
-    },
-    razorpay_order_id: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    status: {
-        type: String,
-        enum: ['Pending', 'Completed', 'Failed'],
-        default: 'Pending'
-    },
-    razorpay_signature: {
-        type: String,
-        default: ''
-    },
-    user: {
-        type: "String",
-        required: true
-    },
-    expirationDate: {
-        type: Date,
-        required: true
-    },
-    transactionId: {
-        type: String,
-        required: true,
-        unique: true, // Ensures the transactionId is unique
-      },
+  plan: {
+    type: String,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  paymentDate: {
+    type: Date,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    default: "PAYMENT_PENDING",
+  },
+  user: {
+    type: "String",
+    required: true,
+  },
+  expirationDate: {
+    type: Date,
+    required: true,
+  },
+  transactionId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  merchantTransactionId: {
+    type: String,
+  },
+  paymentMethod:{
+    type:String,
+  },
+  pgTransactionId: {
+    type: String,
+  },
+  arn: {
+    type: String,
+  },
 });
 
 
