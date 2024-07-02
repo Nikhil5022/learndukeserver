@@ -102,9 +102,6 @@ const jobSchema = new mongoose.Schema({
   whatsappNumber: {
     type: String,
   },
-  countryCode: {
-    type: String,
-  },
   email: {
     type: String,
   },

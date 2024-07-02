@@ -83,174 +83,10 @@ app.use(
   })
 );
 
-// const Razorpay = require("razorpay");
 
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
-
-// app.use("/api/v1", router)
-
-// const instance = new Razorpay({
-//   key_id: process.env.RZP_KEY_ID,
-//   key_secret: process.env.RZP_KEY_SECRET,
-// });
-
-// const checkout = async (req, res) => {
-//   try {
-//     const options = {
-//       amount: Number(req.body.amount * 100),
-//       currency: "INR",
-//       receipt: `R-YCYCLS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}-${new Date()
-//         .toTimeString()
-//         .substring(0, 8)}`,
-//     };
-
-//     const order = await instance.orders.create(options);
-
-//     await res.status(200).json({
-//       success: true,
-//       order,
-//     });
-//   } catch (e) {
-//     res.status(400).json({
-//       success: false,
-//       message: e.message,
-//     });
-//   }
-// };
-
-// const paymentVerification = async (req, res) => {
-//   try {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-//       req.body;
-
-//     const { name, price, days } = req.params;
-
-//     const user = await User.findOne({ email: req.params.id });
-
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-
-//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-//     const expectedSign = crypto
-//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
-//       .update(sign.toString())
-//       .digest("hex");
-
-//     // check both signs
-//     const isAuthentic = expectedSign === razorpay_signature;
-
-//     if (isAuthentic) {
-//       const paymentDate = new Date();
-//       const expirationDate = new Date();
-//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-
-//       const paymentDetails = {
-//         paymentDate: paymentDate,
-//         plan: name,
-//         amount: price,
-//         status: "Completed",
-//         user: user.email,
-//         razorpay_order_id: razorpay_order_id,
-//         expirationDate: expirationDate,
-//         transactionId: razorpay_payment_id,
-//         razorpay_signature: razorpay_signature,
-//       };
-
-//       const payment = new Payment(paymentDetails);
-
-//       user.plans.push(payment.plan);
-//       user.payments.push(payment._id);
-//       user.isPremium = true;
-//       await payment.save();
-//       await user.save();
-//       res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
-//     } else {
-//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//     }
-//   } catch (e) {
-//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//   }
-// };
-// const paymentVerification2 = async (req, res) => {
-//   try {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-//       req.body;
-
-//     const { name, price, days } = req.params;
-
-//     const user = await User.findOne({ email: req.params.id });
-
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-
-//     const mentor = await Mentor.findOne({ email: user.email });
-
-//     if (!mentor) {
-//       return res.status(404).send("Mentor not found");
-//     }
-
-//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-//     const expectedSign = crypto
-//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
-//       .update(sign.toString())
-//       .digest("hex");
-
-//     // check both signs
-//     const isAuthentic = expectedSign === razorpay_signature;
-
-//     if (isAuthentic) {
-//       const paymentDate = new Date();
-//       const expirationDate = new Date();
-//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-
-//       const paymentDetails = {
-//         paymentDate: paymentDate,
-//         plan: name,
-//         amount: price,
-//         status: "Completed",
-//         user: user.email,
-//         razorpay_order_id: razorpay_order_id,
-//         expirationDate: expirationDate,
-//         transactionId: razorpay_payment_id,
-//         razorpay_signature: razorpay_signature,
-//       };
-
-//       const payment = new Payment(paymentDetails);
-
-//       if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
-//         mentor.plans.push("Lifetime");
-//         MENTORVALIDITY += 1;
-//       } else {
-//         mentor.plans.push(payment.plan);
-//       }
-//       mentor.payments.push(payment._id);
-
-//       mentor.isPremium = true;
-//       await payment.save();
-//       await mentor.save();
-//       await user.save();
-//       res.redirect(
-//         `https://learnduke-frontend.vercel.app/mentor/paymentsuccess`
-//       );
-//     } else {
-//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//     }
-//   } catch (e) {
-//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//   }
-// };
-
-// const sendKey = async (req, res) => {
-//   res.status(200).json({
-//     key: process.env.RZP_KEY_ID,
-//   });
-// };
 
 // Google OAuth 2.0 configuration
 passport.use(
@@ -381,6 +217,19 @@ app.get("/getUser/:email", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
+app.get("/premiumCheck/:email", async (req, res) => {
+  try{
+    const user = await User.findOne({email: req.params.email})
+    if(user){
+      res.status(200).send(user.isPremium)
+    }else{
+      res.status(404).send("User not found.")
+    }
+  }catch(error){
+    res.status(500).send(error);
+  }
+})
 
 app.get("/getUsers", async (req, res) => {
   try {
@@ -1241,11 +1090,6 @@ app.get("/pay/:price/:name/:days/:mail/:isMentor", async (req, res) => {
 app.get("/", (req, res) => {
   res.send("Home Page");
 });
-
-// app.post("/checkout", checkout);
-// app.post("/verify/payment/:id/:name/:price/:days", paymentVerification);
-// app.post("/verify/payment/mentor/:id/:name/:price/:days", paymentVerification2);
-// app.get("/getkey", sendKey);
 
 // Start server
 const PORT = process.env.PORT || 3000;
