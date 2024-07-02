@@ -199,6 +199,47 @@ const paymentSchema = new mongoose.Schema({
   arn: {
     type: String,
   },
+  plan: {
+    type: String,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  paymentDate: {
+    type: Date,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    default: "PAYMENT_PENDING",
+  },
+  user: {
+    type: "String",
+    required: true,
+  },
+  expirationDate: {
+    type: Date,
+    required: true,
+  },
+  transactionId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  merchantTransactionId: {
+    type: String,
+  },
+  paymentMethod:{
+    type:String,
+  },
+  pgTransactionId: {
+    type: String,
+  },
+  arn: {
+    type: String,
+  },
 });
 
 const mentorSchema = new mongoose.Schema({

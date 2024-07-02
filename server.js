@@ -212,7 +212,7 @@ app.get("/getJobs", async (req, res) => {
 app.get("/getUser/:email", async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
-    res.send(user);
+    res.status(200).send(user);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -934,8 +934,8 @@ app.get("/getMentor", async (req, res) => {
 });
 
 //redirect api after phonepe payment
-app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res) => {
-    const { merchantTransactionId, name, days , mail
+app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async (req, res) => {
+    const { merchantTransactionId, name, days , mail,isMentor
       //  isMentor, user, 
       } = req.params;
 
@@ -989,27 +989,27 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res
             }
           // console.log(payment)
           if (response.data.code === "PAYMENT_SUCCESS") {
-            // if (isMentor == "true") {
-            //   const mentor = await Mentor.findOne({ email: user.email });
-            //   if (!mentor) {
-            //     return res.status(404).send("Mentor not found");
-            //   }
-            //   if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
-            //     mentor.plans.push("Lifetime");
-            //     MENTORVALIDITY += 1;
-            //   } else {
-            //     mentor.plans.push(payment.plan);
-            //   }
-            //   mentor.payments.push(payment._id);
-            //   mentor.isPremium = true;
-            //   await payment.save();
-            //   await mentor.save();
-            // } else {
+            if (isMentor == "true") {
+              const mentor = await Mentor.findOne({ email: user.email });
+              if (!mentor) {
+                return res.status(404).send("Mentor not found");
+              }
+              if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
+                mentor.plans.push("Lifetime");
+                MENTORVALIDITY += 1;
+              } else {
+                mentor.plans.push(payment.plan);
+              }
+              mentor.payments.push(payment._id);
+              mentor.isPremium = true;
+              await payment.save();
+              await mentor.save();
+            } else {
               user.plans.push(payment.plan);
               user.payments.push(payment._id);
               user.isPremium = true;
               await user.save();
-          // }
+          }
               res.redirect(
                 `https://learnduke-frontend.vercel.app/paymentsuccess`
               );
@@ -1026,14 +1026,15 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res
   }
 );
 
-app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
+app.get("/pay/:price/:name/:days/:mail/:isMentor", async (req, res) => {
 
-  // const { isMentor, name, price, days, phone } = req.params;
-  const {price,name,days,mail } = req.params;
+  const {price,name,days,mail,isMentor } = req.params;
   const user = await User.findOne({ email: mail });
+  console.log(user)
   if(!user){
     res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
   }
+  console.log("1")
   const endPoint = "/pg/v1/pay";
 
   const merchantTransactionId = uniqid();
@@ -1044,7 +1045,7 @@ app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
     amount: parseInt(price)* 100, // in paise
-    redirectUrl: `http://localhost:3000/redirect-url/${merchantTransactionId}/${name}/${days}/${user.email}`,
+    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${name}/${days}/${user.email}/${isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
     paymentInstrument: {
@@ -1076,9 +1077,12 @@ app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
   axios
     .request(options)
     .then(function (response) {
+      console.log("3")
+      console.log(response.data.data.instrumentResponse.redirectInfo.url)
       res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
     })
     .catch(function (error) {
+      console.log("2")
       res.status(500).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
     });
 });
