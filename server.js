@@ -186,8 +186,7 @@ app.post("/addJob", async (req, res) => {
     job.imageLink = user.profilephoto.url;
     job.userName = user.name;
 
-    console.log(job);
-
+  
     const newJob = await Job(job);
 
     user.jobs.push(newJob._id);
@@ -264,8 +263,7 @@ app.get("/getJobs/:email", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-    console.log(user);
-    let jobs = [];
+      let jobs = [];
     for (let i = 0; i < user.jobs.length; i++) {
       const job = await Job.findOne({ _id: user.jobs[i] });
       jobs.push(job);
@@ -738,8 +736,7 @@ app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
     if (!mentors) {
-      console.log("No mentors found");
-      res.status(201).send("No mentors found");
+        res.status(201).send("No mentors found");
     }
     // const mentorsWithUserDetails = [];
     // for (const mentor of mentors) {
@@ -961,7 +958,6 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async
       axios
         .request(options)
         .then(async function (response) {
-          console.log(response.data)
           const paymentDate = new Date();
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + parseInt(days));
@@ -982,8 +978,7 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async
           const payment = new Payment(paymentDetails);
             try {
               await payment.save();
-              console.log('Payment saved successfully.');
-            } catch (error) {
+              } catch (error) {
               console.error('Error saving payment:', error);
               // Handle the error appropriately
             }
@@ -1026,15 +1021,66 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async
   }
 );
 
-app.get("/pay/:price/:name/:days/:mail/:isMentor", async (req, res) => {
+app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
+  const plans = [
+    {
+      name: "Basic",
+      price: 99, // in INR
+      days: 30,
+      isMentor: "true",
+    },
+    {
+      name: "Advance",
+      price: 199, // in INR
+      days: 100,
+      isMentor: "true",
+    },
+    {
+      name: "Premium",
+      price: 499,
+      days: 365,
+      isMentor: "true",
+    },
+    {
+      name: "Basic",
+      price: 99, // in INR
+     days: 100,
+     isMentor: "false",
+    },
+    {
+      name: "Advance",
+      price: 399, // in INR
+      days: 365,
+      isMentor: "false",
+    },
+    {
+      name: "Premium",
+      price: 999, // in INR
+      days: 180,
+      isMentor: "false",
+    },
+    {
+      name: "Teacher Pro",
+      price: 399, // in INR
+      days: 100,
+      isMentor: "false",
+    },
+  ];
 
-  const {price,name,days,mail,isMentor } = req.params;
+  const {name,mail,isMentor } = req.params;
+
+  const plan = plans.find(plan => plan.name === name && plan.isMentor === isMentor);
+
+  if (!plan) {
+      res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+  }
+
+  
+  
   const user = await User.findOne({ email: mail });
-  console.log(user)
   if(!user){
     res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
   }
-  console.log("1")
   const endPoint = "/pg/v1/pay";
 
   const merchantTransactionId = uniqid();
@@ -1044,8 +1090,8 @@ app.get("/pay/:price/:name/:days/:mail/:isMentor", async (req, res) => {
     merchantId: process.env.PHONE_PE_MERCHANT_ID,
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
-    amount: parseInt(price)* 100, // in paise
-    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${name}/${days}/${user.email}/${isMentor}`,
+    amount: parseInt(plan.price)* 100, // in paise
+    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
     paymentInstrument: {
@@ -1077,12 +1123,9 @@ app.get("/pay/:price/:name/:days/:mail/:isMentor", async (req, res) => {
   axios
     .request(options)
     .then(function (response) {
-      console.log("3")
-      console.log(response.data.data.instrumentResponse.redirectInfo.url)
       res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
     })
     .catch(function (error) {
-      console.log("2")
       res.status(500).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
     });
 });
