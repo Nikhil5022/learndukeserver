@@ -69,11 +69,17 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  webinars: [{
+  myWebinars: [{
     id: {type: mongoose.Schema.Types.ObjectId,
     ref: 'Webinar',
     },
   }],
+  joinedWebinars:[
+    {
+      id: {type: mongoose.Schema.Types.ObjectId,
+        ref : "Webinar",
+      }
+    }]
 });
 
 const jobSchema = new mongoose.Schema({
@@ -427,12 +433,12 @@ const webinarSchema = new mongoose.Schema({
     enum: ['Live', 'Past', 'Upcoming'],
   },
   participants: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
   }],
   liveLink: {
     type: String,
-    required: function() { return this.status === 'Live'; },
+    required: true,
   },
 })
 

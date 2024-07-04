@@ -1152,6 +1152,7 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
 
 /* ---------------------------For Webinars-------------------------------- */
 
+//create webinar
 app.post("/create-webinar", async (req, res) => {
   try {
     const { mail, webinar } = req.body;
@@ -1187,7 +1188,7 @@ app.post("/create-webinar", async (req, res) => {
         photo: user.profilephoto.url,
       },
     });
-    user.webinars.unshift(newWebinar._id);
+    user.myWebinars.unshift(newWebinar._id);
 
     await newWebinar.save();
     await user.save();
@@ -1221,6 +1222,136 @@ app.delete("/delete-webinar", async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 });
+
+//get live webinars 
+app.get("/live-webinars", async (req,res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Live" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+})
+
+//get upcoming webinars
+app.get("/upcoming-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Upcoming" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+//get past webinars
+app.get("/past-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Past" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+// get my webinars
+app.get("/get-my-webinars/:id", async(req,res) => {
+   try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.myWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//get registered webinars 
+app.get("/my-registered-webinars", async(req,res)=>{
+  try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.joinedWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//register for a webinar
+app.post("/register-for-webinar", async(req,res) => {
+  try {
+    const {webinarId, mail} = req.body;
+    const user = await User.findOne({email: mail});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinar = await Webinar.findOne({_id: webinarId});
+    if(webinar.creator.id === user._id){
+      return res.status(302).send("You are the creator of webinar.")
+    }
+    if(!webinar){
+      return res.status(404).send("Webinar not found");
+    }
+    if(webinar.status === "Past"){
+      return res.status(400).send("Webinar has already ended");
+    }
+    if(webinar.status === "Live"){
+      return res.status(400).send("Webinar is already live");
+    }
+    if(webinar.participants.includes(user._id)){
+      return res.status(400).send("User has already joined the webinar");
+    }
+    webinar.participants.push(user._id);
+
+    await webinar.save();
+    return res.status(200).send("User joined the webinar successfully");
+  }catch(error){
+    return res.status(500).send("Internal server error")
+  }
+})
+
+// is eligible to join webinar
+app.post("/isEligible", async(req,res)=> {
+  try {
+    const {mail, webinarId} = req.body;
+    const user = await User.findOne({ email: mail})
+    if(!user){
+      return res.status(404).send("User not found")
+    }
+    const webinar = await Webinar.findById({_id: webinarId});
+    if(!webinar){
+      return res.status(404).send("Webinar not found")
+    }
+    const isRegistered = await webinar.participants.includes(user._id.toString());
+    const isCreator = webinar.creator.id.toString() === user._id.toString();
+
+    if(isRegistered || isCreator){
+      return res.status(200).send(true)
+    }      
+    return res.status(201).send(false)
+  } catch (error) {
+    return res.status(500).send("Internal server error")
+  }
+})
+
 // updating the status of the webinar
 const updateWebinarStatus = async () => {
   const time = new Date();
@@ -1235,17 +1366,13 @@ const updateWebinarStatus = async () => {
       istTime< webinar.endTime.getTime() && webinar.status !== "Live"
     ) {
       webinar.status = "Live";
-      //update live link
-      webinar.liveLink = "www.meet.google.com";
       await webinar.save();
     }
     if (istTime> webinar.endTime.getTime()) {
       webinar.status = "Past";
-      webinar.liveLink = "";
+      webinar.liveLink = "past";
       await webinar.save();
     }
-    console.log(webinar.startTime);
-    console.log(webinar.endTime);
   });
 };
 
