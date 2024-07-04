@@ -69,6 +69,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  webinars: [{
+    id: {type: mongoose.Schema.Types.ObjectId,
+    ref: 'Webinar',
+    },
+  }],
 });
 
 const jobSchema = new mongoose.Schema({
@@ -371,12 +376,73 @@ const Reviewschema = new mongoose.Schema({
   },
 });
 
+const webinarSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  creator: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,   
+    },
+    name: {
+      type: String,
+      required: true,
+    }, 
+    photo: {
+      type: String,
+      required: true,
+    }
+  },
+  isPaid: {
+    type: Boolean,
+    enum: [false, true],
+    required: true,
+    default: false,
+  },
+  price:{
+    type: Number,
+    required: function() {
+      return this.isPaid === true
+    }
+  },
+  startTime: {
+    type: Date,
+    required: true,
+  },
+  endTime: {
+    type: Date,
+    required: true,
+  },
+  status: {
+    type: String,
+    default: 'Upcoming',
+    required: true,
+    enum: ['Live', 'Past', 'Upcoming'],
+  },
+  participants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  liveLink: {
+    type: String,
+    required: function() { return this.status === 'Live'; },
+  },
+})
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 const Payment = mongoose.model("Payment", paymentSchema);
 const Mentor = mongoose.model("Mentor", mentorSchema);
 const Review = mongoose.model("Review", Reviewschema);
+const Webinar = mongoose.model("Webinar", webinarSchema)
 
 // export  {Admin, Job, User};
-module.exports = { Admin, Job, User, Payment, Mentor, Review };
+module.exports = { Admin, Job, User, Payment, Mentor, Review, Webinar };

@@ -5,7 +5,15 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin, Payment, Mentor, Review } = require("./schema");
+const {
+  User,
+  Job,
+  Admin,
+  Payment,
+  Mentor,
+  Review,
+  Webinar,
+} = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -82,7 +90,6 @@ app.use(
     saveUninitialized: true,
   })
 );
-
 
 // Passport middleware
 app.use(passport.initialize());
@@ -186,7 +193,6 @@ app.post("/addJob", async (req, res) => {
     job.imageLink = user.profilephoto.url;
     job.userName = user.name;
 
-  
     const newJob = await Job(job);
 
     user.jobs.push(newJob._id);
@@ -218,17 +224,17 @@ app.get("/getUser/:email", async (req, res) => {
 });
 
 app.get("/premiumCheck/:email", async (req, res) => {
-  try{
-    const user = await User.findOne({email: req.params.email})
-    if(user){
-      res.status(200).send(user.isPremium)
-    }else{
-      res.status(404).send("User not found.")
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (user) {
+      res.status(200).send(user.isPremium);
+    } else {
+      res.status(404).send("User not found.");
     }
-  }catch(error){
+  } catch (error) {
     res.status(500).send(error);
   }
-})
+});
 
 app.get("/getUsers", async (req, res) => {
   try {
@@ -263,7 +269,7 @@ app.get("/getJobs/:email", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-      let jobs = [];
+    let jobs = [];
     for (let i = 0; i < user.jobs.length; i++) {
       const job = await Job.findOne({ _id: user.jobs[i] });
       jobs.push(job);
@@ -736,7 +742,7 @@ app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
     if (!mentors) {
-        res.status(201).send("No mentors found");
+      res.status(201).send("No mentors found");
     }
     // const mentorsWithUserDetails = [];
     // for (const mentor of mentors) {
@@ -931,12 +937,19 @@ app.get("/getMentor", async (req, res) => {
 });
 
 //redirect api after phonepe payment
-app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async (req, res) => {
-    const { merchantTransactionId, name, days , mail,isMentor
-      //  isMentor, user, 
-      } = req.params;
+app.get(
+  "/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",
+  async (req, res) => {
+    const {
+      merchantTransactionId,
+      name,
+      days,
+      mail,
+      isMentor,
+      //  isMentor, user,
+    } = req.params;
 
-    const user = await User.findOne({email : mail})
+    const user = await User.findOne({ email: mail });
     if (merchantTransactionId) {
       const xVerify =
         sha256(
@@ -961,27 +974,28 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async
           const paymentDate = new Date();
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-          
+
           const paymentDetails = {
             paymentDate: paymentDate,
             plan: name,
-            amount: parseInt(response.data?.data.amount) / 100, 
+            amount: parseInt(response.data?.data.amount) / 100,
             status: response.data?.code,
             user: mail,
             transactionId: response.data?.data.transactionId,
             merchantTransactionId: merchantTransactionId,
             expirationDate: expirationDate,
             paymentMethod: response.data?.data?.paymentInstrument.type,
-            pgTransactionId: response.data?.data?.paymentInstrument.pgTransactionId,
+            pgTransactionId:
+              response.data?.data?.paymentInstrument.pgTransactionId,
             arn: response.data?.data.paymentInstrument.arn,
           };
           const payment = new Payment(paymentDetails);
-            try {
-              await payment.save();
-              } catch (error) {
-              console.error('Error saving payment:', error);
-              // Handle the error appropriately
-            }
+          try {
+            await payment.save();
+          } catch (error) {
+            console.error("Error saving payment:", error);
+            // Handle the error appropriately
+          }
           // console.log(payment)
           if (response.data.code === "PAYMENT_SUCCESS") {
             if (isMentor == "true") {
@@ -1004,10 +1018,10 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",async
               user.payments.push(payment._id);
               user.isPremium = true;
               await user.save();
-          }
-              res.redirect(
-                `https://learnduke-frontend.vercel.app/paymentsuccess`
-              );
+            }
+            res.redirect(
+              `https://learnduke-frontend.vercel.app/paymentsuccess`
+            );
           } else if (response.data.code === "PAYMENT_ERROR") {
             res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
           }
@@ -1044,8 +1058,8 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     {
       name: "Basic",
       price: 99, // in INR
-     days: 100,
-     isMentor: "false",
+      days: 100,
+      isMentor: "false",
     },
     {
       name: "Advance",
@@ -1067,19 +1081,23 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     },
   ];
 
-  const {name,mail,isMentor } = req.params;
+  const { name, mail, isMentor } = req.params;
 
-  const plan = plans.find(plan => plan.name === name && plan.isMentor === isMentor);
+  const plan = plans.find(
+    (plan) => plan.name === name && plan.isMentor === isMentor
+  );
 
   if (!plan) {
-      res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
   }
 
-  
-  
   const user = await User.findOne({ email: mail });
-  if(!user){
-    res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+  if (!user) {
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
   }
   const endPoint = "/pg/v1/pay";
 
@@ -1090,7 +1108,7 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     merchantId: process.env.PHONE_PE_MERCHANT_ID,
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
-    amount: parseInt(plan.price)* 100, // in paise
+    amount: parseInt(plan.price) * 100, // in paise
     redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
@@ -1126,9 +1144,117 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
       res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
     })
     .catch(function (error) {
-      res.status(500).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+      res
+        .status(500)
+        .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
     });
 });
+
+/* ---------------------------For Webinars-------------------------------- */
+
+app.post("/create-webinar", async (req, res) => {
+  try {
+    const { mail, webinar } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!webinar) {
+      return res.status(404).send("Details not found for the webinar.");
+    }
+    console.log("1");
+    // Parse the UTC date strings to Date objects
+    const startTimeUTC = new Date(webinar.startTime);
+    const endTimeUTC = new Date(webinar.endTime);
+
+    // Calculate the IST offset in milliseconds (5 hours and 30 minutes)
+    const istOffset = 5 * 60 * 60 * 1000 + 30 * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+
+    // Add the IST offset to the UTC date objects
+    const startTimeIST = new Date(startTimeUTC.getTime() + istOffset);
+    const endTimeIST = new Date(endTimeUTC.getTime() + istOffset);
+
+    // Convert to ISO strings if necessary (for example, to store in a database)
+    webinar.startTime = startTimeIST.toISOString();
+    webinar.endTime = endTimeIST.toISOString();
+    console.log("2");
+
+    const newWebinar = new Webinar({
+      ...webinar,
+      creator: {
+        id: user._id,
+        name: user.name,
+        photo: user.profilephoto.url,
+      },
+    });
+    user.webinars.unshift(newWebinar._id);
+
+    await newWebinar.save();
+    await user.save();
+
+    return res.status(200).send(newWebinar);
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+});
+
+//for deleting the webinar
+app.delete("/delete-webinar", async (req, res) => {
+  try {
+    const { id, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!id) {
+      return res.status(404).send("Id not provided");
+    }
+
+    await Webinar.findByIdAndDelete(id);
+
+    user.webinars = user.webinars.filter((web) => web.id === id);
+
+    await user.save();
+
+    return res.status(200).send("Webinar deleted Succesfully.");
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+// updating the status of the webinar
+const updateWebinarStatus = async () => {
+  const time = new Date();
+  const istTime = new Date(time.getTime() + 5.5 * 60 * 60 * 1000);
+  const webinars = await Webinar.find();
+  webinars.forEach(async (webinar) => {
+    if(webinar.status === "Past"){
+      return;
+    }
+    if (
+      istTime> webinar.startTime.getTime() &&
+      istTime< webinar.endTime.getTime() && webinar.status !== "Live"
+    ) {
+      webinar.status = "Live";
+      //update live link
+      webinar.liveLink = "www.meet.google.com";
+      await webinar.save();
+    }
+    if (istTime> webinar.endTime.getTime()) {
+      webinar.status = "Past";
+      webinar.liveLink = "";
+      await webinar.save();
+    }
+    console.log(webinar.startTime);
+    console.log(webinar.endTime);
+  });
+};
+
+cron.schedule("* * * * *", () => {
+  console.log("Checking for webinars to update their status...");
+  updateWebinarStatus();
+});
+
+/* -------------------------------------------------------------------------- */
 
 app.get("/", (req, res) => {
   res.send("Home Page");
