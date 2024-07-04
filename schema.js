@@ -69,6 +69,17 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  myWebinars: [{
+    id: {type: mongoose.Schema.Types.ObjectId,
+    ref: 'Webinar',
+    },
+  }],
+  joinedWebinars:[
+    {
+      id: {type: mongoose.Schema.Types.ObjectId,
+        ref : "Webinar",
+      }
+    }]
 });
 
 const jobSchema = new mongoose.Schema({
@@ -100,9 +111,6 @@ const jobSchema = new mongoose.Schema({
     type: String,
   },
   whatsappNumber: {
-    type: String,
-  },
-  countryCode: {
     type: String,
   },
   email: {
@@ -161,6 +169,47 @@ const adminSchema = new mongoose.Schema({
 });
 
 const paymentSchema = new mongoose.Schema({
+  plan: {
+    type: String,
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+  },
+  paymentDate: {
+    type: Date,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    default: "PAYMENT_PENDING",
+  },
+  user: {
+    type: "String",
+    required: true,
+  },
+  expirationDate: {
+    type: Date,
+    required: true,
+  },
+  transactionId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  merchantTransactionId: {
+    type: String,
+  },
+  paymentMethod:{
+    type:String,
+  },
+  pgTransactionId: {
+    type: String,
+  },
+  arn: {
+    type: String,
+  },
   plan: {
     type: String,
     required: true,
@@ -333,12 +382,73 @@ const Reviewschema = new mongoose.Schema({
   },
 });
 
+const webinarSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  creator: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,   
+    },
+    name: {
+      type: String,
+      required: true,
+    }, 
+    photo: {
+      type: String,
+      required: true,
+    }
+  },
+  isPaid: {
+    type: Boolean,
+    enum: [false, true],
+    required: true,
+    default: false,
+  },
+  price:{
+    type: Number,
+    required: function() {
+      return this.isPaid === true
+    }
+  },
+  startTime: {
+    type: Date,
+    required: true,
+  },
+  endTime: {
+    type: Date,
+    required: true,
+  },
+  status: {
+    type: String,
+    default: 'Upcoming',
+    required: true,
+    enum: ['Live', 'Past', 'Upcoming'],
+  },
+  participants: [{
+    type: String,
+    ref: 'User',
+  }],
+  liveLink: {
+    type: String,
+    required: true,
+  },
+})
+
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
 const User = mongoose.model("User", userSchema);
 const Payment = mongoose.model("Payment", paymentSchema);
 const Mentor = mongoose.model("Mentor", mentorSchema);
 const Review = mongoose.model("Review", Reviewschema);
+const Webinar = mongoose.model("Webinar", webinarSchema)
 
 // export  {Admin, Job, User};
-module.exports = { Admin, Job, User, Payment, Mentor, Review };
+module.exports = { Admin, Job, User, Payment, Mentor, Review, Webinar };

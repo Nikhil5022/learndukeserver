@@ -5,7 +5,15 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin, Payment, Mentor, Review } = require("./schema");
+const {
+  User,
+  Job,
+  Admin,
+  Payment,
+  Mentor,
+  Review,
+  Webinar,
+} = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -83,174 +91,9 @@ app.use(
   })
 );
 
-const Razorpay = require("razorpay");
-
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
-
-// app.use("/api/v1", router)
-
-const instance = new Razorpay({
-  key_id: process.env.RZP_KEY_ID,
-  key_secret: process.env.RZP_KEY_SECRET,
-});
-
-// const checkout = async (req, res) => {
-//   try {
-//     const options = {
-//       amount: Number(req.body.amount * 100),
-//       currency: "INR",
-//       receipt: `R-YCYCLS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}-${new Date()
-//         .toTimeString()
-//         .substring(0, 8)}`,
-//     };
-
-//     const order = await instance.orders.create(options);
-
-//     await res.status(200).json({
-//       success: true,
-//       order,
-//     });
-//   } catch (e) {
-//     res.status(400).json({
-//       success: false,
-//       message: e.message,
-//     });
-//   }
-// };
-
-// const paymentVerification = async (req, res) => {
-//   try {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-//       req.body;
-
-//     const { name, price, days } = req.params;
-
-//     const user = await User.findOne({ email: req.params.id });
-
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-
-//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-//     const expectedSign = crypto
-//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
-//       .update(sign.toString())
-//       .digest("hex");
-
-//     // check both signs
-//     const isAuthentic = expectedSign === razorpay_signature;
-
-//     if (isAuthentic) {
-//       const paymentDate = new Date();
-//       const expirationDate = new Date();
-//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-
-//       const paymentDetails = {
-//         paymentDate: paymentDate,
-//         plan: name,
-//         amount: price,
-//         status: "Completed",
-//         user: user.email,
-//         razorpay_order_id: razorpay_order_id,
-//         expirationDate: expirationDate,
-//         transactionId: razorpay_payment_id,
-//         razorpay_signature: razorpay_signature,
-//       };
-
-//       const payment = new Payment(paymentDetails);
-
-//       user.plans.push(payment.plan);
-//       user.payments.push(payment._id);
-//       user.isPremium = true;
-//       await payment.save();
-//       await user.save();
-//       res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
-//     } else {
-//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//     }
-//   } catch (e) {
-//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//   }
-// };
-// const paymentVerification2 = async (req, res) => {
-//   try {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-//       req.body;
-
-//     const { name, price, days } = req.params;
-
-//     const user = await User.findOne({ email: req.params.id });
-
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-
-//     const mentor = await Mentor.findOne({ email: user.email });
-
-//     if (!mentor) {
-//       return res.status(404).send("Mentor not found");
-//     }
-
-//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-//     const expectedSign = crypto
-//       .createHmac("sha256", process.env.RZP_KEY_SECRET)
-//       .update(sign.toString())
-//       .digest("hex");
-
-//     // check both signs
-//     const isAuthentic = expectedSign === razorpay_signature;
-
-//     if (isAuthentic) {
-//       const paymentDate = new Date();
-//       const expirationDate = new Date();
-//       expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-
-//       const paymentDetails = {
-//         paymentDate: paymentDate,
-//         plan: name,
-//         amount: price,
-//         status: "Completed",
-//         user: user.email,
-//         razorpay_order_id: razorpay_order_id,
-//         expirationDate: expirationDate,
-//         transactionId: razorpay_payment_id,
-//         razorpay_signature: razorpay_signature,
-//       };
-
-//       const payment = new Payment(paymentDetails);
-
-//       if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
-//         mentor.plans.push("Lifetime");
-//         MENTORVALIDITY += 1;
-//       } else {
-//         mentor.plans.push(payment.plan);
-//       }
-//       mentor.payments.push(payment._id);
-
-//       mentor.isPremium = true;
-//       await payment.save();
-//       await mentor.save();
-//       await user.save();
-//       res.redirect(
-//         `https://learnduke-frontend.vercel.app/mentor/paymentsuccess`
-//       );
-//     } else {
-//       res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//     }
-//   } catch (e) {
-//     res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
-//   }
-// };
-
-const sendKey = async (req, res) => {
-  res.status(200).json({
-    key: process.env.RZP_KEY_ID,
-  });
-};
 
 // Google OAuth 2.0 configuration
 passport.use(
@@ -350,8 +193,6 @@ app.post("/addJob", async (req, res) => {
     job.imageLink = user.profilephoto.url;
     job.userName = user.name;
 
-    console.log(job);
-
     const newJob = await Job(job);
 
     user.jobs.push(newJob._id);
@@ -376,7 +217,20 @@ app.get("/getJobs", async (req, res) => {
 app.get("/getUser/:email", async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
-    res.send(user);
+    res.status(200).send(user);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get("/premiumCheck/:email", async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (user) {
+      res.status(200).send(user.isPremium);
+    } else {
+      res.status(404).send("User not found.");
+    }
   } catch (error) {
     res.status(500).send(error);
   }
@@ -415,7 +269,6 @@ app.get("/getJobs/:email", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-    console.log(user);
     let jobs = [];
     for (let i = 0; i < user.jobs.length; i++) {
       const job = await Job.findOne({ _id: user.jobs[i] });
@@ -889,7 +742,6 @@ app.get("/getMentors", async (req, res) => {
   try {
     const mentors = await Mentor.find({ isPremium: true });
     if (!mentors) {
-      console.log("No mentors found");
       res.status(201).send("No mentors found");
     }
     // const mentorsWithUserDetails = [];
@@ -1085,12 +937,19 @@ app.get("/getMentor", async (req, res) => {
 });
 
 //redirect api after phonepe payment
-app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res) => {
-    const { merchantTransactionId, name, days , mail
-      //  isMentor, user, 
-      } = req.params;
+app.get(
+  "/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",
+  async (req, res) => {
+    const {
+      merchantTransactionId,
+      name,
+      days,
+      mail,
+      isMentor,
+      //  isMentor, user,
+    } = req.params;
 
-    const user = await User.findOne({email : mail})
+    const user = await User.findOne({ email: mail });
     if (merchantTransactionId) {
       const xVerify =
         sha256(
@@ -1112,58 +971,57 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res
       axios
         .request(options)
         .then(async function (response) {
-          console.log(response.data)
           const paymentDate = new Date();
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + parseInt(days));
-          
+
           const paymentDetails = {
             paymentDate: paymentDate,
             plan: name,
-            amount: parseInt(response.data?.data.amount) / 100, 
+            amount: parseInt(response.data?.data.amount) / 100,
             status: response.data?.code,
             user: mail,
             transactionId: response.data?.data.transactionId,
             merchantTransactionId: merchantTransactionId,
             expirationDate: expirationDate,
             paymentMethod: response.data?.data?.paymentInstrument.type,
-            pgTransactionId: response.data?.data?.paymentInstrument.pgTransactionId,
+            pgTransactionId:
+              response.data?.data?.paymentInstrument.pgTransactionId,
             arn: response.data?.data.paymentInstrument.arn,
           };
           const payment = new Payment(paymentDetails);
-            try {
-              await payment.save();
-              console.log('Payment saved successfully.');
-            } catch (error) {
-              console.error('Error saving payment:', error);
-              // Handle the error appropriately
-            }
+          try {
+            await payment.save();
+          } catch (error) {
+            console.error("Error saving payment:", error);
+            // Handle the error appropriately
+          }
           // console.log(payment)
           if (response.data.code === "PAYMENT_SUCCESS") {
-            // if (isMentor == "true") {
-            //   const mentor = await Mentor.findOne({ email: user.email });
-            //   if (!mentor) {
-            //     return res.status(404).send("Mentor not found");
-            //   }
-            //   if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
-            //     mentor.plans.push("Lifetime");
-            //     MENTORVALIDITY += 1;
-            //   } else {
-            //     mentor.plans.push(payment.plan);
-            //   }
-            //   mentor.payments.push(payment._id);
-            //   mentor.isPremium = true;
-            //   await payment.save();
-            //   await mentor.save();
-            // } else {
+            if (isMentor == "true") {
+              const mentor = await Mentor.findOne({ email: user.email });
+              if (!mentor) {
+                return res.status(404).send("Mentor not found");
+              }
+              if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
+                mentor.plans.push("Lifetime");
+                MENTORVALIDITY += 1;
+              } else {
+                mentor.plans.push(payment.plan);
+              }
+              mentor.payments.push(payment._id);
+              mentor.isPremium = true;
+              await payment.save();
+              await mentor.save();
+            } else {
               user.plans.push(payment.plan);
               user.payments.push(payment._id);
               user.isPremium = true;
               await user.save();
-          // }
-              res.redirect(
-                `https://learnduke-frontend.vercel.app/paymentsuccess`
-              );
+            }
+            res.redirect(
+              `https://learnduke-frontend.vercel.app/paymentsuccess`
+            );
           } else if (response.data.code === "PAYMENT_ERROR") {
             res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
           }
@@ -1177,13 +1035,69 @@ app.get("/redirect-url/:merchantTransactionId/:name/:days/:mail",async (req, res
   }
 );
 
-app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
+app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
+  const plans = [
+    {
+      name: "Basic",
+      price: 99, // in INR
+      days: 30,
+      isMentor: "true",
+    },
+    {
+      name: "Advance",
+      price: 199, // in INR
+      days: 100,
+      isMentor: "true",
+    },
+    {
+      name: "Premium",
+      price: 499,
+      days: 365,
+      isMentor: "true",
+    },
+    {
+      name: "Basic",
+      price: 99, // in INR
+      days: 100,
+      isMentor: "false",
+    },
+    {
+      name: "Advance",
+      price: 399, // in INR
+      days: 365,
+      isMentor: "false",
+    },
+    {
+      name: "Premium",
+      price: 999, // in INR
+      days: 180,
+      isMentor: "false",
+    },
+    {
+      name: "Teacher Pro",
+      price: 399, // in INR
+      days: 100,
+      isMentor: "false",
+    },
+  ];
 
-  // const { isMentor, name, price, days, phone } = req.params;
-  const {price,name,days,mail } = req.params;
+  const { name, mail, isMentor } = req.params;
+
+  const plan = plans.find(
+    (plan) => plan.name === name && plan.isMentor === isMentor
+  );
+
+  if (!plan) {
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+  }
+
   const user = await User.findOne({ email: mail });
-  if(!user){
-    res.status(404).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+  if (!user) {
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
   }
   const endPoint = "/pg/v1/pay";
 
@@ -1194,8 +1108,8 @@ app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
     merchantId: process.env.PHONE_PE_MERCHANT_ID,
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
-    amount: parseInt(price)* 100, // in paise
-    redirectUrl: `http://localhost:3000/redirect-url/${merchantTransactionId}/${name}/${days}/${user.email}`,
+    amount: parseInt(plan.price) * 100, // in paise
+    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
     paymentInstrument: {
@@ -1230,18 +1144,248 @@ app.get("/pay/:price/:name/:days/:mail", async (req, res) => {
       res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
     })
     .catch(function (error) {
-      res.status(500).redirect("https://learnduke-frontend.vercel.app/paymentfailed")
+      res
+        .status(500)
+        .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
     });
 });
+
+/* ---------------------------For Webinars-------------------------------- */
+
+//create webinar
+app.post("/create-webinar", async (req, res) => {
+  try {
+    const { mail, webinar } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!webinar) {
+      return res.status(404).send("Details not found for the webinar.");
+    }
+    console.log("1");
+    // Parse the UTC date strings to Date objects
+    const startTimeUTC = new Date(webinar.startTime);
+    const endTimeUTC = new Date(webinar.endTime);
+
+    // Calculate the IST offset in milliseconds (5 hours and 30 minutes)
+    const istOffset = 5 * 60 * 60 * 1000 + 30 * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+
+    // Add the IST offset to the UTC date objects
+    const startTimeIST = new Date(startTimeUTC.getTime() + istOffset);
+    const endTimeIST = new Date(endTimeUTC.getTime() + istOffset);
+
+    // Convert to ISO strings if necessary (for example, to store in a database)
+    webinar.startTime = startTimeIST.toISOString();
+    webinar.endTime = endTimeIST.toISOString();
+    console.log("2");
+
+    const newWebinar = new Webinar({
+      ...webinar,
+      creator: {
+        id: user._id,
+        name: user.name,
+        photo: user.profilephoto.url,
+      },
+    });
+    user.myWebinars.unshift(newWebinar._id);
+
+    await newWebinar.save();
+    await user.save();
+
+    return res.status(200).send(newWebinar);
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+});
+
+//for deleting the webinar
+app.delete("/delete-webinar", async (req, res) => {
+  try {
+    const { id, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!id) {
+      return res.status(404).send("Id not provided");
+    }
+
+    await Webinar.findByIdAndDelete(id);
+
+    user.webinars = user.webinars.filter((web) => web.id === id);
+
+    await user.save();
+
+    return res.status(200).send("Webinar deleted Succesfully.");
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+//get live webinars 
+app.get("/live-webinars", async (req,res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Live" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+})
+
+//get upcoming webinars
+app.get("/upcoming-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Upcoming" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+//get past webinars
+app.get("/past-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Past" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+// get my webinars
+app.get("/get-my-webinars/:id", async(req,res) => {
+   try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.myWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//get registered webinars 
+app.get("/my-registered-webinars", async(req,res)=>{
+  try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.joinedWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//register for a webinar
+app.post("/register-for-webinar", async(req,res) => {
+  try {
+    const {webinarId, mail} = req.body;
+    const user = await User.findOne({email: mail});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinar = await Webinar.findOne({_id: webinarId});
+    if(webinar.creator.id === user._id){
+      return res.status(302).send("You are the creator of webinar.")
+    }
+    if(!webinar){
+      return res.status(404).send("Webinar not found");
+    }
+    if(webinar.status === "Past"){
+      return res.status(400).send("Webinar has already ended");
+    }
+    if(webinar.status === "Live"){
+      return res.status(400).send("Webinar is already live");
+    }
+    if(webinar.participants.includes(user._id)){
+      return res.status(400).send("User has already joined the webinar");
+    }
+    webinar.participants.push(user._id);
+
+    await webinar.save();
+    return res.status(200).send("User joined the webinar successfully");
+  }catch(error){
+    return res.status(500).send("Internal server error")
+  }
+})
+
+// is eligible to join webinar
+app.post("/isEligible", async(req,res)=> {
+  try {
+    const {mail, webinarId} = req.body;
+    const user = await User.findOne({ email: mail})
+    if(!user){
+      return res.status(404).send("User not found")
+    }
+    const webinar = await Webinar.findById({_id: webinarId});
+    if(!webinar){
+      return res.status(404).send("Webinar not found")
+    }
+    const isRegistered = await webinar.participants.includes(user._id.toString());
+    const isCreator = webinar.creator.id.toString() === user._id.toString();
+
+    if(isRegistered || isCreator){
+      return res.status(200).send(true)
+    }      
+    return res.status(201).send(false)
+  } catch (error) {
+    return res.status(500).send("Internal server error")
+  }
+})
+
+// updating the status of the webinar
+const updateWebinarStatus = async () => {
+  const time = new Date();
+  const istTime = new Date(time.getTime() + 5.5 * 60 * 60 * 1000);
+  const webinars = await Webinar.find();
+  webinars.forEach(async (webinar) => {
+    if(webinar.status === "Past"){
+      return;
+    }
+    if (
+      istTime> webinar.startTime.getTime() &&
+      istTime< webinar.endTime.getTime() && webinar.status !== "Live"
+    ) {
+      webinar.status = "Live";
+      await webinar.save();
+    }
+    if (istTime> webinar.endTime.getTime()) {
+      webinar.status = "Past";
+      webinar.liveLink = "past";
+      await webinar.save();
+    }
+  });
+};
+
+cron.schedule("* * * * *", () => {
+  console.log("Checking for webinars to update their status...");
+  updateWebinarStatus();
+});
+
+/* -------------------------------------------------------------------------- */
 
 app.get("/", (req, res) => {
   res.send("Home Page");
 });
-
-// app.post("/checkout", checkout);
-// app.post("/verify/payment/:id/:name/:price/:days", paymentVerification);
-// app.post("/verify/payment/mentor/:id/:name/:price/:days", paymentVerification2);
-app.get("/getkey", sendKey);
 
 // Start server
 const PORT = process.env.PORT || 3000;
