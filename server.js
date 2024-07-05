@@ -1186,7 +1186,7 @@ app.post("/create-webinar", async (req, res) => {
       creator: {
         id: user._id,
         name: user.name,
-        photo: user.profilephoto.url,
+        photo: mentor.profilePhoto.url,
       },
     });
     user.myWebinars.unshift(newWebinar._id);
