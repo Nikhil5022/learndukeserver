@@ -440,6 +440,10 @@ const webinarSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  topics: {
+    type: [],
+    required: true,
+  },
 })
 
 const Admin = mongoose.model("Admin", adminSchema);
