@@ -1156,9 +1156,10 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
 app.post("/create-webinar", async (req, res) => {
   try {
     const { mail, webinar } = req.body;
-    const user = await User.findOne({ email: mail });
-    if (!user) {
-      return res.status(404).send("User not found");
+    const mentor = await Mentor.findOne({ email: mail });
+    const user = await User.findOne({email: mail})
+    if (!mentor || !user) {
+      return res.status(404).send("Mentor not found");
     }
     if (!webinar) {
       return res.status(404).send("Details not found for the webinar.");
@@ -1185,7 +1186,7 @@ app.post("/create-webinar", async (req, res) => {
       creator: {
         id: user._id,
         name: user.name,
-        photo: user.profilephoto.url,
+        photo: mentor.profilePhoto.url,
       },
     });
     user.myWebinars.unshift(newWebinar._id);
