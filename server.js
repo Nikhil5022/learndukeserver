@@ -1382,6 +1382,25 @@ cron.schedule("* * * * *", () => {
   updateWebinarStatus();
 });
 
+
+app.get("/getWebinar/:id", async (req, res) => {
+  try {
+    const webinar = await Webinar.findOne({ _id: req.params.id });
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+    console.log(webinar.creator.id.toString())
+    const mentor = await Mentor.findOne({ id: webinar.creator.id.toString() });
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+
+    res.send(webinar, mentor);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
 /* -------------------------------------------------------------------------- */
 
 app.get("/", (req, res) => {

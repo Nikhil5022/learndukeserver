@@ -468,11 +468,7 @@ const webinarSchema = new mongoose.Schema({
   liveLink: {
     type: String,
     required: true,
-  },
-  topics: {
-    type: [],
-    required: true,
-  },
+  }
 })
 
 const Admin = mongoose.model("Admin", adminSchema);
