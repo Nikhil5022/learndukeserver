@@ -1316,10 +1316,7 @@ app.post("/register-for-webinar", async(req,res) => {
       return res.status(404).send("Webinar not found");
     }
     if(webinar.status === "Past"){
-      return res.status(400).send("Webinar has already ended");
-    }
-    if(webinar.status === "Live"){
-      return res.status(400).send("Webinar is already live");
+      return res.status(400).send("Webinar has ended");
     }
     if(webinar.participants.includes(user._id)){
       return res.status(400).send("User has already joined the webinar");
