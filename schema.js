@@ -387,30 +387,30 @@ const webinarSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  photo: {
-    public_id:{
-      type: String,
-      required: true,
-      default: '1234',
-    }, 
-    url:{
-      type: String,
-      required: true,
-    }
-  },
+  // photo: {
+  //   public_id:{
+  //     type: String,
+  //     required: true,
+  //     default: '1234',
+  //   }, 
+  //   url:{
+  //     type: String,
+  //     required: true,
+  //   }
+  // },
   topics:[{
     name: {
       type: String,
-      required: true,
+      // required: true,
     },
     description: {
       type: [String],
-      required: true,
-    }
-}],
+      // required: true,
+    } 
+  }],
   additionalBenefits:[{
     type: String,
-    required: true,
+    // required: true,
   }],
   description: {
     type: String,
