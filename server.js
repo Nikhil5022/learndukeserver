@@ -1164,6 +1164,10 @@ app.post("/create-webinar", async (req, res) => {
     if (!webinar) {
       return res.status(404).send("Details not found for the webinar.");
     }
+    if(mentor.isPremium === false){
+      return res.status(400).send("Subscribe to any of our plans to create a webinar.")
+    }
+    //add webinar limits as per mentor subscription
     console.log("1");
     // Parse the UTC date strings to Date objects
     const startTimeUTC = new Date(webinar.startTime);
@@ -1312,10 +1316,7 @@ app.post("/register-for-webinar", async(req,res) => {
       return res.status(404).send("Webinar not found");
     }
     if(webinar.status === "Past"){
-      return res.status(400).send("Webinar has already ended");
-    }
-    if(webinar.status === "Live"){
-      return res.status(400).send("Webinar is already live");
+      return res.status(400).send("Webinar has ended");
     }
     if(webinar.participants.includes(user._id)){
       return res.status(400).send("User has already joined the webinar");
