@@ -1,21 +1,3 @@
-// Load environment variables from .env file
-// import dotenv from "dotenv";
-// dotenv.config();
-// import express from "express";
-// import passport from "passport";
-// import GoogleStrategy from "passport-google-oauth20/lib/strategy.js";
-// import session from "express-session";
-// import mongoose from "mongoose";
-// import { User, Job, Admin } from "./schema.js";
-// import cors from "cors";
-// import jwt from "jsonwebtoken";
-// import morgan from "morgan";
-// import router from "./routes/paymentRoutes.js";
-// import cloudinary from "cloudinary"
-// import { v2 as cloud } from "cloudinary";
-// import bodyParser from "body-parser";
-// import fileUpload from "express-fileupload";
-
 const dotenv = require("dotenv");
 dotenv.config();
 const express = require("express");
@@ -23,7 +5,15 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const mongoose = require("mongoose");
-const { User, Job, Admin, Payment } = require("./schema");
+const {
+  User,
+  Job,
+  Admin,
+  Payment,
+  Mentor,
+  Review,
+  Webinar,
+} = require("./schema");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
@@ -37,7 +27,13 @@ const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
 const app = express();
-app.use(cors());
+const axios = require("axios");
+const uniqid = require("uniqid");
+const sha256 = require("sha256");
+app.use(cors("*"));
+
+let MENTORVALIDITY = 0;
+
 app.use(morgan("dev"));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(
@@ -49,39 +45,20 @@ app.use(
 );
 app.use(express.json());
 app.use(fileUpload());
+const { google } = require('googleapis');
 
-// Initialize OpenAI API
-// const openai = new OpenAIApi({ key: process.env.OPENAI_API_KEY });
 
-// app.post("/generateJobDescription", async (req, res) => {
-//     const prompt = req.body.prompt;
 
-//     try {
-//         const completion = await openai.chat.completions.create({
-//             messages: [{ role: "system", content: prompt }],
-//             model: "text-davinci-codex",
-//           });
-
-//         const jobDescription = completion.data.choices[0].text.trim();
-//         res.status(200).json({ jobDescription });
-//     } catch (error) {
-//         console.error("Error generating job description:", error);
-//         res.status(500).json({ error: "Failed to generate job description" });
-//     }
-// });
 
 // Connect to MongoDB Atlas
 mongoose
-    .connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
-    .then(() => {
-        console.log("Connected to MongoDB Atlas");
-    })
-    .catch((err) => {
-        console.error("Error connecting to MongoDB Atlas:", err.message);
-    });
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("Connected to MongoDB Atlas");
+  })
+  .catch((err) => {
+    console.error("Error connecting to MongoDB Atlas:", err.message);
+  });
 
 cloudinary.v2.config({
     cloud_name: process.env.CLOUDINARY_NAME,
@@ -98,136 +75,55 @@ app.use(
     })
 );
 
-const Razorpay = require("razorpay");
-// const paymentAPI = async () => {
-//     try {
-//         const instance = new Razorpay({
-//             key_id: process.env.RZP_KEY_ID,
-//             key_secret: process.env.RZP_KEY_SECRET,
-//         })
-//         console.log('Payment integration successful.')
-//         return instance;
-//     } catch (error) {
-//         console.log("Error connecting payment api : " + error)
-//     }
-// }
-
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-// app.use("/api/v1", router)
-
-const instance = new Razorpay({
-    key_id: process.env.RZP_KEY_ID,
-    key_secret: process.env.RZP_KEY_SECRET,
-});
-
-const checkout = async (req, res) => {
-    try {
-        const options = {
-            amount: Number(req.body.amount * 100),
-            currency: "INR",
-            receipt: `R-ABCS+${new Date().getDate()}-${new Date().getMonth()}-${new Date().getFullYear()}`,
-        };
-
-        const order = await instance.orders.create(options);
-
-        await res.status(200).json({
-            success: true,
-            order,
-        });
-    } catch (e) {
-        res.status(400).json({
-            success: false,
-            message: e.message,
-        });
-    }
-};
-
-const paymentVerification = async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-            req.body;
-
-        const user = await User.findOne({ email: req.params.id });
-
-        const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-        const expectedSign = crypto
-            .createHmac("sha256", process.env.RZP_KEY_SECRET)
-            .update(sign.toString())
-            .digest("hex");
-
-        // check both signs
-        const isAuthentic = expectedSign === razorpay_signature;
-
-        if (isAuthentic) {
-            user.isPremium = true;
-            await user.save();
-            res.redirect(`https://learndukeserver.vercel.app/paymentsuccess`);
-        } else {
-            res.redirect("https://learndukeserver.vercel.app/paymentfailed");
-        }
-    } catch (e) {
-        res.redirect("https://learndukeserver.vercel.app/paymentfailed");
-    }
-};
-
-const sendKey = async (req, res) => {
-    res.status(200).json({
-        key: process.env.RZP_KEY_ID,
-    });
-};
-
 // Google OAuth 2.0 configuration
 passport.use(
-    new GoogleStrategy(
-        {
-            clientID: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: "https://learndukeserver.vercel.app/auth/google/callback",
-        },
-        async (accessToken, refreshToken, profile, done) => {
-            try {
-                console.log("Google profile:", profile);
-                const email = profile.emails[0].value;
-                const name = profile.displayName;
-                const profilephoto = profile.photos[0].value;
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "https://learndukeserver.vercel.app/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails[0].value;
+        const name = profile.displayName;
+        const profilephoto = profile.photos[0].value;
 
-                // Check if user already exists
-                let user = await User.findOne({ email: email });
-                if (!user) {
-                    // If user doesn't exist, create a new one
-                    user = new User({
-                        email: email,
-                        name: name,
-                        jobs: [],
-                        accessToken: accessToken,
-                        profilephoto: {
-                            public_id: "1234",
-                            url: profilephoto,
-                        },
-                    });
-                    await user.save();
-                } else {
-                    // If user exists, update their accessToken and profile photo
-                    user.accessToken = accessToken;
-                    user.profilephoto = {
-                        public_id: "1234",
-                        url: user.profilephoto.url,
-                    };
-                    await user.save();
-                }
-
-                console.log("User details saved to database:", user);
-                done(null, user);
-            } catch (error) {
-                console.error("Error saving user details to database:", error);
-                done(error, null);
-            }
+        // Check if user already exists
+        let user = await User.findOne({ email: email });
+        if (!user) {
+          // If user doesn't exist, create a new one
+          user = new User({
+            email: email,
+            name: name,
+            jobs: [],
+            accessToken: accessToken,
+            profilephoto: {
+              public_id: "1234",
+              url: profilephoto,
+            },
+          });
+          await user.save();
+        } else {
+          // If user exists, update their accessToken and profile photo
+          user.accessToken = accessToken;
+          user.profilephoto = {
+            public_id: "1234",
+            url: user.profilephoto.url,
+          };
+          await user.save();
         }
-    )
+        done(null, user);
+      } catch (error) {
+        console.error("Error saving user details to database:", error);
+        done(error, null);
+      }
+    }
+  )
 );
 
 // Serialize user
@@ -271,22 +167,26 @@ app.get("/logout", (req, res) => {
 
 // APIs
 app.post("/addJob", async (req, res) => {
-    console.log(req.body);
-    const job = new Job(req.body);
-    try {
-        let user = await User.findOne({ email: req.body.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        console.log(user);
-        user.jobs.push(job._id);
-
-        await user.save();
-        await job.save();
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    let user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+    const job = req.body;
+
+    job.imageLink = user.profilephoto.url;
+    job.userName = user.name;
+
+    const newJob = await Job(job);
+
+    user.jobs.push(newJob._id);
+
+    await user.save();
+    await newJob.save();
+    res.send(newJob);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/getJobs", async (req, res) => {
@@ -299,12 +199,25 @@ app.get("/getJobs", async (req, res) => {
 });
 
 app.get("/getUser/:email", async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.params.email });
-        res.send(user);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    res.status(200).send(user);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get("/premiumCheck/:email", async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (user) {
+      res.status(200).send(user.isPremium);
+    } else {
+      res.status(404).send("User not found.");
     }
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/getUsers", async (req, res) => {
@@ -518,25 +431,6 @@ app.get("/getSimilarJobs/:jobId", async (req, res) => {
     }
 });
 
-app.post("/addPayment", async (req, res) => {
-    try {
-        const payment = new Payment(req.body);
-        const user = await User.findOne({ email: payment.user });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        user.isPremium = true;
-        user.plans.push(payment.plan);
-        user.payments.push(payment._id);
-        await user.save();
-        await payment.save();
-        res.send(payment).redirect("https://learnduke-frontend.vercel.app/paymentsuccess");
-    } catch (error) {
-        console.log("Error adding payment:", error);
-        res.status(500).send(error);
-    }
-});
-
 const checkExpiringSubscritions = async () => {
     const payments = await Payment.find({ expirationDate: new Date() });
     payments.forEach(async (payment) => {
@@ -547,79 +441,146 @@ const checkExpiringSubscritions = async () => {
 };
 
 cron.schedule("0 0 * * *", () => {
-    checkExpiringSubscritions();
+  checkExpiringSubscritions();
+  checkingMentorValidity();
 });
 
-cron.schedule('* * * * * *', async () => {
-    // now i need to get data of how many jobs have been posted on different domanins
-    // and then send the email to the user
-
-    // create a dictionary of domain and count
-    const domainCount = {};
-    const jobs = await Job.find({ isReviewed: true });
-    // jobs posted only today
-    const today = new Date();
-    const todayJobs = jobs.filter(job => job.postedOn.getDate() === today.getDate());
-    todayJobs.forEach(job => {
-        if (domainCount[job.domain]) {
-            domainCount[job.domain] += 1;
-        } else {
-            domainCount[job.domain] = 1;
-        }
+const checkingMentorValidity = async () => {
+  const mentors = await Mentor.find();
+  const date = new Date();
+  mentors.forEach(async (mentor) => {
+    const payments = await Payment.find({ user: mentor.email });
+    payments.forEach(async (payment) => {
+      const date1 = new Date(payment.expirationDate);
+      date1.setDate(date1.getDate() + 1);
+      if (date1 < date) {
+        mentor.plans.map((plan, index) => {
+          if (plan === payment.plan && plan !== "Lifetime") {
+            mentor.plans.splice(index, 1);
+            mentor.isPremium = false;
+          }
+        });
+        await mentor.save();
+      }
     });
+  });
+};
 
-    console.log(domainCount);
+cron.schedule("* * * * *", async () => {
+  // now i need to get data of how many jobs have been posted on different domanins
+  // and then send the email to the user
 
-    const users = await User.find();
-    users.forEach(async user => {
-        if (user.jobAllerts) {
-            const email = user.email;
-            let message = "Hi, here are the job alerts for today:\n\n";
-            Object.keys(domainCount).forEach(domain => {
-                message += `${domain}: ${domainCount[domain]} jobs\n`;
-            });
+  // create a dictionary of domain and count
+  const domainCount = {};
+  const jobs = await Job.find({ isReviewed: true });
+  // jobs posted only today
+  const today = new Date();
+  const todayJobs = jobs.filter(
+    (job) => job.postedOn.getDate() === today.getDate()
+  );
+  todayJobs.forEach((job) => {
+    if (domainCount[job.domain]) {
+      domainCount[job.domain] += 1;
+    } else {
+      domainCount[job.domain] = 1;
+    }
+  });
 
-            console.log(message);
-        }
-    });
-
-
+  const users = await User.find();
+  users.forEach(async (user) => {
+    if (user.jobAllerts) {
+      const email = user.email;
+      let message = "Hi, here are the job alerts for today:\n\n";
+      Object.keys(domainCount).forEach((domain) => {
+        message += `${domain}: ${domainCount[domain]} jobs\n`;
+      });
+    }
+  });
 });
 
-app.post('/jobAlerts/:email', async (req, res) => {
-    try {
-        const email = req.params.email;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        console.log(req.body.jobAlerts);
-        user.jobAllerts = req.body.jobAlerts;
-        await user.save();
-        res.send(user);
-    } catch (error) {
-        res.status(500, error);
+app.post("/jobAlerts/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+    user.jobAllerts = req.body.jobAlerts;
+    await user.save();
+    res.send(user);
+  } catch (error) {
+    res.status(500, error);
+  }
 });
 
+app.get("/getReviewedJobs", async (req, res) => {
+  try {
+    const {
+      title,
+      location,
+      jobType,
+      domain,
+      education,
+      page = 1,
+      limit = 8,
+    } = req.query;
 
-app.get('/getReviewedJobs/', async (req, res) => {
-    try {
-        const jobs = await Job.find({ isReviewed: true });
-        res.send(jobs);
-    } catch (error) {
-        res.status(500).send(error);
+    let query = {};
+    if (title) {
+      query.title = { $regex: new RegExp(title, "i") };
     }
-}
-);
+    if (typeof location === "string" && location.trim() !== "") {
+      query.location = { $regex: new RegExp(location.trim(), "i") };
+    }
+    if (typeof jobType === "string" && jobType.trim() !== "") {
+      query.jobType = { $regex: new RegExp(jobType.trim(), "i") };
+    }
+    query.isReviewed = true;
+
+    const orConditions = [];
+
+    if (domain) {
+      orConditions.push(...domain.map((d) => ({ domain: d })));
+    }
+    if (education) {
+      orConditions.push(...education.map((e) => ({ education: e })));
+    }
+
+    // If there are any $or conditions, add them to the query
+    if (orConditions.length > 0) {
+      query.$or = orConditions;
+    }
+
+    try {
+      const jobs = await Job.find(query)
+        .sort({ postedOn: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+      const totalJobs = await Job.countDocuments(query);
+
+      res.status(200).json({
+        jobs,
+        totalJobs,
+        totalPages: Math.ceil(totalJobs / limit),
+        currentPage: parseInt(page),
+      });
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      res.status(500).send("Error fetching jobs");
+    }
+  } catch (error) {
+    console.error("Server error:", error);
+    res.status(500).send("Server error");
+  }
+});
 
 app.post("/undoReview/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOneAndUpdate(
-            { _id: req.params.jobId },
-            { $set: { isReviewed: false } },
-            { new: true }
-        );
+  try {
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.jobId },
+      { $set: { isReviewed: false } },
+      { new: true }
+    );
 
         if (!job) {
             return res.status(404).send("Job not found");
@@ -723,13 +684,806 @@ app.get("/getSubscriptions/:email", async (req, res) => {
     }
 });
 
+// mentors section
+
+app.post("/addMentor/:email", async (req, res) => {
+  try {
+    let user = await User.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    let mentorData = await req.body;
+
+    //cloudinary image
+    try {
+      const newPic = await cloudinary.uploader.upload(mentorData.profilePhoto, {
+        folder: "LearnDuke",
+        width: 150,
+        crop: "scale",
+      });
+
+      mentorData.profilePhoto = {
+        public_id: newPic.public_id,
+        url: newPic.secure_url,
+      };
+    } catch (uploadError) {
+      console.log("Error uploading new profile photo:", uploadError);
+    }
+    const mentorDataWithEmail = {
+      ...mentorData,
+      email: user.email,
+      name: user.name,
+    };
+    const mentor = new Mentor(mentorDataWithEmail);
+    await mentor.save();
+    res.send(mentor);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get("/getMentors", async (req, res) => {
+  try {
+    const mentors = await Mentor.find({ isPremium: true });
+    if (!mentors) {
+      res.status(201).send("No mentors found");
+    }
+    // const mentorsWithUserDetails = [];
+    // for (const mentor of mentors) {
+    //   try {
+    //     const user = await User.findOne({ email: mentor.email });
+    //     if (!user) {
+    //       console.warn(`User not found for mentor with email: ${mentor.email}`);
+    //     } else {
+    //       // Create a new object by spreading mentor data and adding name and isPremium properties
+    //       const mentorWithUserDetails = {
+    //         ...mentor.toObject(), // Convert Mongoose document to plain JavaScript object
+    //         name: user.name,
+    //         isPremium: user.isPremium,
+    //       };
+    //       mentorsWithUserDetails.push(mentorWithUserDetails);
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching user for mentor:", error);
+    //   }
+    // }
+
+    res.send(mentors);
+  } catch (error) {
+    console.error("Error fetching mentors:", error);
+    res.status(500).send(error);
+  }
+});
+
+app.get("/getMentor/:id", async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ _id: req.params.id });
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+
+    // Get reviews of mentor
+    const reviewsPromises = mentor.reviews.map((reviewId) =>
+      Review.findOne({ _id: reviewId })
+    );
+    const reviews = await Promise.all(reviewsPromises);
+
+    // Get data from user
+    const user = await User.findOne({ email: mentor.email });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    // Append data of user into mentor object
+    const mentorWithUserDetails = {
+      ...mentor.toObject(),
+      name: user.name,
+      isPremium: user.isPremium,
+      jobs: user.jobs,
+      linkedin: user.linkedin,
+      github: user.github,
+      bio: user.bio,
+      payments: user.payments,
+      plans: user.plans,
+      jobAllerts: user.jobAllerts,
+      reviews: reviews,
+    };
+
+    res.send(mentorWithUserDetails);
+  } catch (error) {
+    console.error("Error fetching mentor data:", error); // Log the error for debugging
+    res.status(500).send("An error occurred while fetching mentor data.");
+  }
+});
+
+app.get("/isAlreadyMentor/:email", async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ email: req.params.email });
+    if (mentor) {
+      res.json({ success: true, mentor });
+    } else {
+      res.send(false);
+    }
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.put("/updateMentor/:email", async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ email: req.params.email });
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+
+    // if type of res.body.profilePhoto is string then upload the image to cloudinary and destroy previous image
+    if (typeof req.body.profilePhoto == "string") {
+      const imageId = mentor.profilePhoto
+        ? mentor.profilePhoto.public_id
+        : null;
+
+      // Check if there's an existing image to delete
+      if (imageId && imageId !== "1234") {
+        try {
+          await cloudinary.uploader.destroy(imageId);
+        } catch (cloudinaryError) {
+          console.error(
+            "Error deleting previous profile photo:",
+            cloudinaryError
+          );
+        }
+      }
+
+      try {
+        const newPic = await cloudinary.uploader.upload(req.body.profilePhoto, {
+          folder: "LearnDuke",
+          width: 150,
+          crop: "scale",
+        });
+
+        req.body.profilePhoto = {
+          public_id: newPic.public_id,
+          url: newPic.secure_url,
+        };
+      } catch (uploadError) {
+        console.error("Error uploading new profile photo:", uploadError);
+        return res.status(500).send("Error uploading profile photo");
+      }
+    }
+
+    const newMentor = await Mentor.findByIdAndUpdate(mentor._id, req.body, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    });
+
+    await mentor.save();
+    res.send(newMentor);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get("/getMentor", async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const startIndex = (page - 1) * limit;
+
+  const search = req.query.search || "";
+  const domain = req.query.domain || "All Domains";
+  const subDomains = req.query.subDomain ? req.query.subDomain.split(",") : [];
+
+  try {
+    // Construct query conditionally
+
+    let query = {};
+
+    if (search) {
+      query = {
+        $or: [
+          { name: { $regex: new RegExp(search, "i") } },
+          { domain: { $regex: new RegExp(search, "i") } },
+          { subDomain: { $elemMatch: { $in: [new RegExp(search, "i")] } } },
+          { skills: { $elemMatch: { $in: [new RegExp(search, "i")] } } },
+        ],
+      };
+    }
+
+    if (domain !== "All Domains") {
+      query.domain = { $regex: new RegExp(domain, "i") };
+    }
+
+    if (subDomains.length > 0) {
+      query.subDomain = {
+        $elemMatch: { $in: subDomains.map((sub) => new RegExp(sub, "i")) },
+      };
+    }
+
+    // const totalMentors = await Mentor.countDocuments(query).exec();
+    const mentors = await Mentor.find(query)
+      .sort({ postedOn: -1 })
+      .limit(limit)
+      .skip(startIndex)
+      .exec();
+    const premiummentor = mentors.filter((mentor) => mentor.isPremium === true);
+
+    const totalPages = Math.ceil(premiummentor.length / limit);
+
+    res.send({
+      startIndex,
+      totalmentor: premiummentor.length,
+      totalPages,
+      mentors: premiummentor.filter(Boolean), // Filter out null or undefined values
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+//redirect api after phonepe payment
+app.get(
+  "/redirect-url/:merchantTransactionId/:name/:days/:mail/:isMentor",
+  async (req, res) => {
+    const {
+      merchantTransactionId,
+      name,
+      days,
+      mail,
+      isMentor,
+      //  isMentor, user,
+    } = req.params;
+
+    const user = await User.findOne({ email: mail });
+    if (merchantTransactionId) {
+      const xVerify =
+        sha256(
+          `/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}${process.env.PHONE_PE_SALT_KEY}`
+        ) +
+        "###" +
+        process.env.PHONE_PE_SALT_INDEX;
+
+      const options = {
+        method: "get",
+        url: `${process.env.PHONE_PE_HOST_URL}/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}`,
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+          "X-MERCHANT-ID": merchantTransactionId,
+          "X-VERIFY": xVerify,
+        },
+      };
+      axios
+        .request(options)
+        .then(async function (response) {
+          const paymentDate = new Date();
+          const expirationDate = new Date();
+          expirationDate.setDate(expirationDate.getDate() + parseInt(days));
+
+          const paymentDetails = {
+            paymentDate: paymentDate,
+            plan: name,
+            amount: parseInt(response.data?.data.amount) / 100,
+            status: response.data?.code,
+            user: mail,
+            transactionId: response.data?.data.transactionId,
+            merchantTransactionId: merchantTransactionId,
+            expirationDate: expirationDate,
+            paymentMethod: response.data?.data?.paymentInstrument.type,
+            pgTransactionId:
+              response.data?.data?.paymentInstrument.pgTransactionId,
+            arn: response.data?.data.paymentInstrument.arn,
+          };
+          const payment = new Payment(paymentDetails);
+          try {
+            await payment.save();
+          } catch (error) {
+            console.error("Error saving payment:", error);
+            // Handle the error appropriately
+          }
+          // console.log(payment)
+          if (response.data.code === "PAYMENT_SUCCESS") {
+            if (isMentor == "true") {
+              const mentor = await Mentor.findOne({ email: user.email });
+              if (!mentor) {
+                return res.status(404).send("Mentor not found");
+              }
+              if (MENTORVALIDITY < 20000 && payment.plan === "Premium") {
+                mentor.plans.push("Lifetime");
+                MENTORVALIDITY += 1;
+              } else {
+                mentor.plans.push(payment.plan);
+              }
+              mentor.payments.push(payment._id);
+              mentor.isPremium = true;
+              await payment.save();
+              await mentor.save();
+            } else {
+              user.plans.push(payment.plan);
+              user.payments.push(payment._id);
+              user.isPremium = true;
+              await user.save();
+            }
+            res.redirect(
+              `https://learnduke-frontend.vercel.app/paymentsuccess`
+            );
+          } else if (response.data.code === "PAYMENT_ERROR") {
+            res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+          }
+        })
+        .catch(function (error) {
+          res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+        });
+    } else {
+      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+    }
+  }
+);
+
+app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
+  const plans = [
+    {
+      name: "Basic",
+      price: 99, // in INR
+      days: 30,
+      isMentor: "true",
+    },
+    {
+      name: "Advance",
+      price: 199, // in INR
+      days: 100,
+      isMentor: "true",
+    },
+    {
+      name: "Premium",
+      price: 499,
+      days: 365,
+      isMentor: "true",
+    },
+    {
+      name: "Basic",
+      price: 99, // in INR
+      days: 100,
+      isMentor: "false",
+    },
+    {
+      name: "Advance",
+      price: 399, // in INR
+      days: 365,
+      isMentor: "false",
+    },
+    {
+      name: "Premium",
+      price: 999, // in INR
+      days: 180,
+      isMentor: "false",
+    },
+    {
+      name: "Teacher Pro",
+      price: 399, // in INR
+      days: 100,
+      isMentor: "false",
+    },
+  ];
+
+  const { name, mail, isMentor } = req.params;
+
+  const plan = plans.find(
+    (plan) => plan.name === name && plan.isMentor === isMentor
+  );
+
+  if (!plan) {
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+  }
+
+  const user = await User.findOne({ email: mail });
+  if (!user) {
+    res
+      .status(404)
+      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+  }
+  const endPoint = "/pg/v1/pay";
+
+  const merchantTransactionId = uniqid();
+  const userId = "1234";
+
+  const payload = {
+    merchantId: process.env.PHONE_PE_MERCHANT_ID,
+    merchantTransactionId: merchantTransactionId,
+    merchantUserId: userId,
+    amount: parseInt(plan.price) * 100, // in paise
+    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
+    redirectMode: "REDIRECT",
+    mobileNumber: "1111111111", // to be clarified.
+    paymentInstrument: {
+      type: "PAY_PAGE",
+    },
+  };
+
+  const bufferObj = Buffer.from(JSON.stringify(payload), "utf8");
+
+  const base64EncodedPayload = bufferObj.toString("base64");
+
+  const xVerify =
+    sha256(base64EncodedPayload + endPoint + process.env.PHONE_PE_SALT_KEY) +
+    "###" +
+    process.env.PHONE_PE_SALT_INDEX;
+
+  const options = {
+    method: "post",
+    url: `${process.env.PHONE_PE_HOST_URL}${endPoint}`,
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      "X-VERIFY": xVerify,
+    },
+    data: {
+      request: base64EncodedPayload,
+    },
+  };
+  axios
+    .request(options)
+    .then(function (response) {
+      res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
+    })
+    .catch(function (error) {
+      res
+        .status(500)
+        .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+    });
+});
+
+/* ---------------------------For Webinars-------------------------------- */
+
+const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.WEBCLIENT_ID,
+  process.env.WEBCLIENT_SECRET,
+  process.env.REDIRECT_URL
+)
+
+async function createMeetEvent(auth,webinar) {
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const event = {
+    summary: webinar.title,
+    start: {
+      dateTime: webinar.startTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    end: {
+      dateTime: webinar.endTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    conferenceData: {
+      createRequest: {
+        conferenceSolutionKey: {
+          type: 'hangoutsMeet'
+        },
+        requestId: 'Surelywork_webinar'
+      }
+    },
+    attendees: [],
+  };
+  
+
+  try {
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+      conferenceDataVersion: 1,
+    });
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating event: ', error);
+    throw error;
+  }
+}
+
+// app.get('/auth', (req, res) => {
+//   const authUrl = oauth2Client.generateAuthUrl({
+//     access_type: 'offline',
+//     scope: SCOPES,
+//   });
+//   console.log(authUrl)
+//   res.redirect(authUrl);
+// });
+
+app.get('/oauth2callback', async (req, res) => {
+  const { code,state } = req.query;
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+  console.log(req.body)
+  const { webinarId } = JSON.parse(state);
+  res.redirect(`/create-meet-event?webinarId=${webinarId}`);
+});
+
+app.get('/create-meet-event', async (req, res) => {
+  try {
+    const { webinarId } = req.query;
+    const webinar = await Webinar.findById(webinarId);
+    if (!webinar) {
+      return res.status(404).send('Webinar not found');
+    }
+    const event = await createMeetEvent(oauth2Client,webinar);
+    console.log(event)
+    res.redirect('http://localhost:5173/webinars/');
+  } catch (error) {
+    res.status(500).send('Error creating event');
+  }
+});
+
+
+//create webinar
+app.post("/create-webinar", async (req, res) => {
+  try {
+    const { mail, webinar } = req.body;
+    const mentor = await Mentor.findOne({ email: mail });
+    const user = await User.findOne({email: mail})
+    if (!mentor || !user) {
+      return res.status(404).send("Mentor not found");
+    }
+    if (!webinar) {
+      return res.status(404).send("Details not found for the webinar.");
+    }
+    if(mentor.isPremium === false){
+      return res.status(400).send("Subscribe to any of our plans to create a webinar.")
+    }
+    //add webinar limits as per mentor subscription
+    console.log("1");
+    // Parse the UTC date strings to Date objects
+    const startTimeUTC = new Date(webinar.startTime);
+    const endTimeUTC = new Date(webinar.endTime);
+
+    // Calculate the IST offset in milliseconds (5 hours and 30 minutes)
+    const istOffset = 5 * 60 * 60 * 1000 + 30 * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+
+    // Add the IST offset to the UTC date objects
+    const startTimeIST = new Date(startTimeUTC.getTime() + istOffset);
+    const endTimeIST = new Date(endTimeUTC.getTime() + istOffset);
+
+    // Convert to ISO strings if necessary (for example, to store in a database)
+    webinar.startTime = startTimeIST.toISOString();
+    webinar.endTime = endTimeIST.toISOString();
+    console.log("2");
+
+    const newWebinar = new Webinar({
+      ...webinar,
+      creator: {
+        id: user._id,
+        name: user.name,
+        photo: mentor.profilePhoto.url,
+      },
+    });
+    user.myWebinars.unshift(newWebinar._id);
+
+    await newWebinar.save();
+    await user.save();
+
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: SCOPES,
+      state: JSON.stringify({ webinarId: newWebinar._id }),
+    });
+    console.log(authUrl)
+    res.status(200).send(authUrl);
+
+    
+  } catch (error) {
+    return res.status(500).send(error);
+  }
+});
+
+//for deleting the webinar
+app.delete("/delete-webinar", async (req, res) => {
+  try {
+    const { id, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    if (!id) {
+      return res.status(404).send("Id not provided");
+    }
+
+    await Webinar.findByIdAndDelete(id);
+
+    user.webinars = user.webinars.filter((web) => web.id === id);
+
+    await user.save();
+
+    return res.status(200).send("Webinar deleted Succesfully.");
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+//get live webinars 
+app.get("/live-webinars", async (req,res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Live" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+})
+
+//get upcoming webinars
+app.get("/upcoming-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Upcoming" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+//get past webinars
+app.get("/past-webinars", async (req, res) => {
+  try {
+    const webinars = await Webinar.find({ status: "Past" });
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+// get my webinars
+app.get("/get-my-webinars/:id", async(req,res) => {
+   try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.myWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//get registered webinars 
+app.get("/my-registered-webinars", async(req,res)=>{
+  try {
+    const {id} = req.params;
+    const user = await User.findOne({email: id});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+    
+    user.joinedWebinars.forEach(async(obj)=> {
+      const webinar = await Webinar.findById({_id: obj.id});
+      webinars.push(webinar);
+    })
+
+    return res.status(200).send(webinars);
+   } catch (error) {
+    return res.status(500).send("Internal server error")
+   }
+})
+
+//register for a webinar
+app.post("/register-for-webinar", async(req,res) => {
+  try {
+    const {webinarId, mail} = req.body;
+    const user = await User.findOne({email: mail});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinar = await Webinar.findOne({_id: webinarId});
+    if(webinar.creator.id === user._id){
+      return res.status(302).send("You are the creator of webinar.")
+    }
+    if(!webinar){
+      return res.status(404).send("Webinar not found");
+    }
+    if(webinar.status === "Past"){
+      return res.status(400).send("Webinar has ended");
+    }
+    if(webinar.participants.includes(user._id)){
+      return res.status(400).send("User has already joined the webinar");
+    }
+    webinar.participants.push(user._id);
+
+    await webinar.save();
+    return res.status(200).send("User joined the webinar successfully");
+  }catch(error){
+    return res.status(500).send("Internal server error")
+  }
+})
+
+// is eligible to join webinar
+app.post("/isEligible", async(req,res)=> {
+  try {
+    const {mail, webinarId} = req.body;
+    const user = await User.findOne({ email: mail})
+    if(!user){
+      return res.status(404).send("User not found")
+    }
+    const webinar = await Webinar.findById({_id: webinarId});
+    if(!webinar){
+      return res.status(404).send("Webinar not found")
+    }
+    const isRegistered = await webinar.participants.includes(user._id.toString());
+    const isCreator = webinar.creator.id.toString() === user._id.toString();
+
+    if(isRegistered || isCreator){
+      return res.status(200).send(true)
+    }      
+    return res.status(201).send(false)
+  } catch (error) {
+    return res.status(500).send("Internal server error")
+  }
+})
+
+// updating the status of the webinar
+const updateWebinarStatus = async () => {
+  const time = new Date();
+  const istTime = new Date(time.getTime() + 5.5 * 60 * 60 * 1000);
+  const webinars = await Webinar.find();
+  webinars.forEach(async (webinar) => {
+    if(webinar.status === "Past"){
+      return;
+    }
+    if (
+      istTime> webinar.startTime.getTime() &&
+      istTime< webinar.endTime.getTime() && webinar.status !== "Live"
+    ) {
+      webinar.status = "Live";
+      await webinar.save();
+    }
+    if (istTime> webinar.endTime.getTime()) {
+      webinar.status = "Past";
+      webinar.liveLink = "past";
+      await webinar.save();
+    }
+  });
+};
+
+cron.schedule("* * * * *", () => {
+  console.log("Checking for webinars to update their status...");
+  updateWebinarStatus();
+});
+
+app.get("/getWebinar/:id", async (req, res) => {
+  try {
+    const webinar = await Webinar.findOne({ _id: req.params.id });
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+
+    console.log(`Webinar Creator ID: ${webinar.creator.id.toString()}`);
+    
+    // Assuming Mentor model uses ObjectId type for id
+    const mentor = await Mentor.findOne({ _id: webinar.creator.id });
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+
+    res.send({ webinar, mentor });
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).send(error);
+  }
+});
+
+
+/* -------------------------------------------------------------------------- */
+
 app.get("/", (req, res) => {
     res.send("Home Page");
 });
-
-app.post("/checkout", checkout);
-app.post("/verify/payment/:id", paymentVerification);
-app.get("/getkey", sendKey);
 
 // Start server
 const PORT = process.env.PORT || 3000;
