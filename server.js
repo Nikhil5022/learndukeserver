@@ -45,26 +45,10 @@ app.use(
 );
 app.use(express.json());
 app.use(fileUpload());
+const { google } = require('googleapis');
 
-// Initialize OpenAI API
-// const openai = new OpenAIApi({ key: process.env.OPENAI_API_KEY });
 
-// app.post("/generateJobDescription", async (req, res) => {
-//     const prompt = req.body.prompt;
 
-//     try {
-//         const completion = await openai.chat.completions.create({
-//             messages: [{ role: "system", content: prompt }],
-//             model: "text-davinci-codex",
-//           });
-
-//         const jobDescription = completion.data.choices[0].text.trim();
-//         res.status(200).json({ jobDescription });
-//     } catch (error) {
-//         console.error("Error generating job description:", error);
-//         res.status(500).json({ error: "Failed to generate job description" });
-//     }
-// });
 
 // Connect to MongoDB Atlas
 mongoose
@@ -1152,6 +1136,87 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
 
 /* ---------------------------For Webinars-------------------------------- */
 
+const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.WEBCLIENT_ID,
+  process.env.WEBCLIENT_SECRET,
+  process.env.REDIRECT_URL
+)
+
+async function createMeetEvent(auth,webinar) {
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const event = {
+    summary: webinar.title,
+    start: {
+      dateTime: webinar.startTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    end: {
+      dateTime: webinar.endTime,
+      timeZone: 'Asia/Kolkata',
+    },
+    conferenceData: {
+      createRequest: {
+        conferenceSolutionKey: {
+          type: 'hangoutsMeet'
+        },
+        requestId: 'Surelywork_webinar'
+      }
+    },
+    attendees: [],
+  };
+  
+
+  try {
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+      conferenceDataVersion: 1,
+    });
+    console.log(response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating event: ', error);
+    throw error;
+  }
+}
+
+// app.get('/auth', (req, res) => {
+//   const authUrl = oauth2Client.generateAuthUrl({
+//     access_type: 'offline',
+//     scope: SCOPES,
+//   });
+//   console.log(authUrl)
+//   res.redirect(authUrl);
+// });
+
+app.get('/oauth2callback', async (req, res) => {
+  const { code,state } = req.query;
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+  console.log(req.body)
+  const { webinarId } = JSON.parse(state);
+  res.redirect(`/create-meet-event?webinarId=${webinarId}`);
+});
+
+app.get('/create-meet-event', async (req, res) => {
+  try {
+    const { webinarId } = req.query;
+    const webinar = await Webinar.findById(webinarId);
+    if (!webinar) {
+      return res.status(404).send('Webinar not found');
+    }
+    const event = await createMeetEvent(oauth2Client,webinar);
+    console.log(event)
+    res.redirect('http://localhost:5173/webinars/');
+  } catch (error) {
+    res.status(500).send('Error creating event');
+  }
+});
+
+
 //create webinar
 app.post("/create-webinar", async (req, res) => {
   try {
@@ -1198,7 +1263,15 @@ app.post("/create-webinar", async (req, res) => {
     await newWebinar.save();
     await user.save();
 
-    return res.status(200).send(newWebinar);
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: SCOPES,
+      state: JSON.stringify({ webinarId: newWebinar._id }),
+    });
+    console.log(authUrl)
+    res.status(200).send(authUrl);
+
+    
   } catch (error) {
     return res.status(500).send(error);
   }
@@ -1383,24 +1456,28 @@ cron.schedule("* * * * *", () => {
   updateWebinarStatus();
 });
 
-
 app.get("/getWebinar/:id", async (req, res) => {
   try {
     const webinar = await Webinar.findOne({ _id: req.params.id });
     if (!webinar) {
       return res.status(404).send("Webinar not found");
     }
-    console.log(webinar.creator.id.toString())
-    const mentor = await Mentor.findOne({ id: webinar.creator.id.toString() });
+
+    console.log(`Webinar Creator ID: ${webinar.creator.id.toString()}`);
+    
+    // Assuming Mentor model uses ObjectId type for id
+    const mentor = await Mentor.findOne({ _id: webinar.creator.id });
     if (!mentor) {
       return res.status(404).send("Mentor not found");
     }
 
-    res.send(webinar, mentor);
+    res.send({ webinar, mentor });
   } catch (error) {
+    console.error("Error: ", error);
     res.status(500).send(error);
   }
 });
+
 
 /* -------------------------------------------------------------------------- */
 
