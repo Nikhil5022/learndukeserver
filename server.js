@@ -37,11 +37,11 @@ let MENTORVALIDITY = 0;
 app.use(morgan("dev"));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(
-    bodyParser.urlencoded({
-        limit: "50mb",
-        extended: true,
-        parameterLimit: 5000000,
-    })
+  bodyParser.urlencoded({
+    limit: "50mb",
+    extended: true,
+    parameterLimit: 5000000,
+  })
 );
 app.use(express.json());
 app.use(fileUpload());
@@ -61,18 +61,18 @@ mongoose
   });
 
 cloudinary.v2.config({
-    cloud_name: process.env.CLOUDINARY_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Express session middleware
 app.use(
-    session({
-        secret: process.env.SESSION_SECRET,
-        resave: false,
-        saveUninitialized: true,
-    })
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
 );
 
 // Passport middleware
@@ -128,41 +128,41 @@ passport.use(
 
 // Serialize user
 passport.serializeUser((user, done) => {
-    done(null, user);
+  done(null, user);
 });
 
 // Deserialize user
 passport.deserializeUser((user, done) => {
-    done(null, user);
+  done(null, user);
 });
 
 // Routes
 app.get("/", (req, res) => {
-    res.send("Home Page");
+  res.send("Home Page");
 });
 
 // Google auth route
 app.get(
-    "/auth/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 // Google auth callback route
 app.get(
-    "/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login" }),
-    (req, res) => {
-        // Successful authentication, redirect to home page or handle as needed
-        res.redirect(
-            `https://learnduke-frontend.vercel.app/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
-        );
-    }
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  (req, res) => {
+    // Successful authentication, redirect to home page or handle as needed
+    res.redirect(
+      `https://learnduke-frontend.vercel.app/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
+    );
+  }
 );
 
 // Logout route
 app.get("/logout", (req, res) => {
-    req.logout();
-    res.redirect("/");
+  req.logout();
+  res.redirect("/");
 });
 
 // APIs
@@ -190,12 +190,12 @@ app.post("/addJob", async (req, res) => {
 });
 
 app.get("/getJobs", async (req, res) => {
-    try {
-        const jobs = await Job.find();
-        res.send(jobs);
-    } catch (error) {
-        res.status(500).send(error);
-    }
+  try {
+    const jobs = await Job.find();
+    res.send(jobs);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/getUser/:email", async (req, res) => {
@@ -221,223 +221,223 @@ app.get("/premiumCheck/:email", async (req, res) => {
 });
 
 app.get("/getUsers", async (req, res) => {
-    try {
-        const users = await User.find();
-        res.send(users);
-    } catch (error) {
-        res.status(500).send(error);
-    }
+  try {
+    const users = await User.find();
+    res.send(users);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/updateUser/:email", async (req, res) => {
-    try {
-        const user = await User.findOneAndUpdate(
-            { email: req.params.email },
-            { $set: { isPremium: req.body.isPremium } },
-            { new: true }
-        );
+  try {
+    const user = await User.findOneAndUpdate(
+      { email: req.params.email },
+      { $set: { isPremium: req.body.isPremium } },
+      { new: true }
+    );
 
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-
-        res.send(user);
-    } catch (error) {
-        res.status(500).send(error);
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+
+    res.send(user);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/getJobs/:email", async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        let jobs = [];
-        for (let i = 0; i < user.jobs.length; i++) {
-            const job = await Job.findOne({ _id: user.jobs[i] });
-            jobs.push(job);
-        }
-
-        res.send(jobs);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+    let jobs = [];
+    for (let i = 0; i < user.jobs.length; i++) {
+      const job = await Job.findOne({ _id: user.jobs[i] });
+      jobs.push(job);
+    }
+
+    res.send(jobs);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.delete("/deleteJob/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOneAndDelete({ _id: req.params.jobId });
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-
-        const user = await User.findOne({ email: job.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-
-        // Remove job from user's jobs array
-        user.jobs = user.jobs.filter(
-            (jobId) => jobId.toString() !== req.params.jobId
-        );
-
-        await user.save();
-
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const job = await Job.findOneAndDelete({ _id: req.params.jobId });
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+
+    const user = await User.findOne({ email: job.email });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    // Remove job from user's jobs array
+    user.jobs = user.jobs.filter(
+      (jobId) => jobId.toString() !== req.params.jobId
+    );
+
+    await user.save();
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/login", async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const admin = await Admin.findOne({ email });
+  try {
+    const { email, password } = req.body;
+    const admin = await Admin.findOne({ email });
 
-        if (!admin) {
-            return res.send({ message: "Admin not found" });
-        }
-
-        if (admin.password !== password) {
-            return res.send({ message: "Invalid password" });
-        }
-
-        const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-            expiresIn: "1h",
-        });
-
-        res.send({ message: "Login successful", token });
-    } catch (error) {
-        console.error("Server error:", error);
-        res.status(500).send("Server error");
+    if (!admin) {
+      return res.send({ message: "Admin not found" });
     }
+
+    if (admin.password !== password) {
+      return res.send({ message: "Invalid password" });
+    }
+
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    res.send({ message: "Login successful", token });
+  } catch (error) {
+    console.error("Server error:", error);
+    res.status(500).send("Server error");
+  }
 });
 
 app.post("/updateUserInfo/:email", async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        user.linkedin = req.body.linkedin;
-        user.github = req.body.github;
-        user.phoneNumber = req.body.phoneNumber;
-        user.whatsappNumber = req.body.whatsappNumber;
-        user.bio = req.body.bio;
-        await user.save();
-        res.send(user);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+    user.linkedin = req.body.linkedin;
+    user.github = req.body.github;
+    user.phoneNumber = req.body.phoneNumber;
+    user.whatsappNumber = req.body.whatsappNumber;
+    user.bio = req.body.bio;
+    await user.save();
+    res.send(user);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/editUserData/:email", async (req, res) => {
-    const { userData, imageChange } = req.body;
-    try {
-        const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-
-        if (imageChange) {
-            const imageId = user.profilephoto ? user.profilephoto.public_id : null;
-
-            // Check if there's an existing image to delete
-            if (imageId !== "1234") {
-                try {
-                    await cloudinary.uploader.destroy(imageId);
-                } catch (cloudinaryError) {
-                    console.error(
-                        "Error deleting previous profile photo:",
-                        cloudinaryError
-                    );
-                }
-            }
-
-            try {
-                const newPic = await cloudinary.uploader.upload(
-                    userData.profilephoto.url,
-                    {
-                        folder: "LearnDuke",
-                        width: 150,
-                        crop: "scale",
-                    }
-                );
-
-                userData.profilephoto = {
-                    public_id: newPic.public_id,
-                    url: newPic.secure_url,
-                };
-            } catch (uploadError) {
-                console.error("Error uploading new profile photo:", uploadError);
-                return res.status(500).send("Error uploading profile photo");
-            }
-        }
-
-        // Update the user fields that are present in the request body
-        Object.keys(userData).forEach((key) => {
-            user[key] = userData[key];
-        });
-
-        // Save the updated user
-        await user.save();
-
-        res.status(200).send("User data updated successfully");
-    } catch (error) {
-        console.error("Error updating user data:", error);
-        res.status(500).send("Internal server error");
+  const { userData, imageChange } = req.body;
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+
+    if (imageChange) {
+      const imageId = user.profilephoto ? user.profilephoto.public_id : null;
+
+      // Check if there's an existing image to delete
+      if (imageId !== "1234") {
+        try {
+          await cloudinary.uploader.destroy(imageId);
+        } catch (cloudinaryError) {
+          console.error(
+            "Error deleting previous profile photo:",
+            cloudinaryError
+          );
+        }
+      }
+
+      try {
+        const newPic = await cloudinary.uploader.upload(
+          userData.profilephoto.url,
+          {
+            folder: "LearnDuke",
+            width: 150,
+            crop: "scale",
+          }
+        );
+
+        userData.profilephoto = {
+          public_id: newPic.public_id,
+          url: newPic.secure_url,
+        };
+      } catch (uploadError) {
+        console.error("Error uploading new profile photo:", uploadError);
+        return res.status(500).send("Error uploading profile photo");
+      }
+    }
+
+    // Update the user fields that are present in the request body
+    Object.keys(userData).forEach((key) => {
+      user[key] = userData[key];
+    });
+
+    // Save the updated user
+    await user.save();
+
+    res.status(200).send("User data updated successfully");
+  } catch (error) {
+    console.error("Error updating user data:", error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 // get job by id
 app.get("/getJobById/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOne({ _id: req.params.jobId });
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const job = await Job.findOne({ _id: req.params.jobId });
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/getSimilarJobs/:jobId", async (req, res) => {
-    try {
-        const jobId = req.params.jobId;
+  try {
+    const jobId = req.params.jobId;
 
-        // Fetch the current job by its ID
-        const currjob = await Job.findById(jobId);
-        if (!currjob) {
-            return res.status(404).send("Job not found");
-        }
-
-        const tags = currjob.tags;
-        if (!tags || tags.length === 0) {
-            return res.status(404).send("No similar jobs found");
-        }
-
-        // Find jobs with at least one matching tag, excluding the current job
-        const similarJobs = await Job.find({
-            _id: { $ne: currjob._id },
-            tags: { $in: tags },
-        });
-
-        res.send(similarJobs);
-    } catch (error) {
-        console.error("Error fetching similar jobs:", error);
-        res.status(500).send(error);
+    // Fetch the current job by its ID
+    const currjob = await Job.findById(jobId);
+    if (!currjob) {
+      return res.status(404).send("Job not found");
     }
+
+    const tags = currjob.tags;
+    if (!tags || tags.length === 0) {
+      return res.status(404).send("No similar jobs found");
+    }
+
+    // Find jobs with at least one matching tag, excluding the current job
+    const similarJobs = await Job.find({
+      _id: { $ne: currjob._id },
+      tags: { $in: tags },
+    });
+
+    res.send(similarJobs);
+  } catch (error) {
+    console.error("Error fetching similar jobs:", error);
+    res.status(500).send(error);
+  }
 });
 
 const checkExpiringSubscritions = async () => {
-    const payments = await Payment.find({ expirationDate: new Date() });
-    payments.forEach(async (payment) => {
-        const user = await User.findOne({ email: payment.user });
-        user.isPremium = false;
-        await user.save();
-    });
+  const payments = await Payment.find({ expirationDate: new Date() });
+  payments.forEach(async (payment) => {
+    const user = await User.findOne({ email: payment.user });
+    user.isPremium = false;
+    await user.save();
+  });
 };
 
 cron.schedule("0 0 * * *", () => {
@@ -582,106 +582,106 @@ app.post("/undoReview/:jobId", async (req, res) => {
       { new: true }
     );
 
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/rejectJob/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOneAndUpdate(
-            { _id: req.params.jobId },
-            { $set: { isRejected: true } },
-            { new: true }
-        );
+  try {
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.jobId },
+      { $set: { isRejected: true } },
+      { new: true }
+    );
 
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/approveJob/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOneAndUpdate(
-            { _id: req.params.jobId },
-            { $set: { isReviewed: true } },
-            { new: true }
-        );
+  try {
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.jobId },
+      { $set: { isReviewed: true } },
+      { new: true }
+    );
 
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.post("/undoReject/:jobId", async (req, res) => {
-    try {
-        const job = await Job.findOneAndUpdate(
-            { _id: req.params.jobId },
-            { $set: { isRejected: false } },
-            { new: true }
-        );
+  try {
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.jobId },
+      { $set: { isRejected: false } },
+      { new: true }
+    );
 
-        if (!job) {
-            return res.status(404).send("Job not found");
-        }
-
-        res.send(job);
-    } catch (error) {
-        res.status(500).send(error);
+    if (!job) {
+      return res.status(404).send("Job not found");
     }
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 // emails section
 
 app.post("/sendEmail", async (req, res) => {
-    try {
-        const { to, subject, text } = req.body;
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to,
-            subject,
-            text,
-        };
+  try {
+    const { to, subject, text } = req.body;
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to,
+      subject,
+      text,
+    };
 
-        await transporter.sendMail(mailOptions);
-        res.send("Email sent successfully");
-    } catch (error) {
-        console.error("Error sending email:", error);
-        res.status(500).send("Internal server error");
-    }
+    await transporter.sendMail(mailOptions);
+    res.send("Email sent successfully");
+  } catch (error) {
+    console.error("Error sending email:", error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 app.get("/getSubscriptions/:email", async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.params.email });
-        if (!user) {
-            return res.status(404).send("User not found");
-        }
-        const subscriptions = user.payments;
-        const allPayments = [];
-        for (let i = 0; i < subscriptions.length; i++) {
-            const payment = await Payment.findOne({ _id: subscriptions[i] });
-            allPayments.push(payment);
-        }
-        res.send(allPayments); // Send the allPayments array
-    } catch (error) {
-        res.status(500).send(error);
+  try {
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
+    const subscriptions = user.payments;
+    const allPayments = [];
+    for (let i = 0; i < subscriptions.length; i++) {
+      const payment = await Payment.findOne({ _id: subscriptions[i] });
+      allPayments.push(payment);
+    }
+    res.send(allPayments); // Send the allPayments array
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 // mentors section
@@ -1144,7 +1144,7 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.REDIRECT_URL
 )
 
-async function createMeetEvent(auth,webinar) {
+async function createMeetEvent(auth, webinar) {
   const calendar = google.calendar({ version: 'v3', auth });
 
   const event = {
@@ -1167,7 +1167,7 @@ async function createMeetEvent(auth,webinar) {
     },
     attendees: [],
   };
-  
+
 
   try {
     const response = await calendar.events.insert({
@@ -1183,17 +1183,10 @@ async function createMeetEvent(auth,webinar) {
   }
 }
 
-// app.get('/auth', (req, res) => {
-//   const authUrl = oauth2Client.generateAuthUrl({
-//     access_type: 'offline',
-//     scope: SCOPES,
-//   });
-//   console.log(authUrl)
-//   res.redirect(authUrl);
-// });
+
 
 app.get('/oauth2callback', async (req, res) => {
-  const { code,state } = req.query;
+  const { code, state } = req.query;
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
   console.log(req.body)
@@ -1208,8 +1201,12 @@ app.get('/create-meet-event', async (req, res) => {
     if (!webinar) {
       return res.status(404).send('Webinar not found');
     }
-    const event = await createMeetEvent(oauth2Client,webinar);
+    const event = await createMeetEvent(oauth2Client, webinar);
     console.log(event)
+    const webinar2 = await Webinar.findById(webinarId);
+    webinar2.liveLink = event.hangoutLink;
+    webinar2.status = "Live";
+    await webinar2.save();
     res.redirect('http://localhost:5173/webinars/');
   } catch (error) {
     res.status(500).send('Error creating event');
@@ -1222,42 +1219,92 @@ app.post("/create-webinar", async (req, res) => {
   try {
     const { mail, webinar } = req.body;
     const mentor = await Mentor.findOne({ email: mail });
-    const user = await User.findOne({email: mail})
+    const user = await User.findOne({ email: mail })
     if (!mentor || !user) {
       return res.status(404).send("Mentor not found");
     }
     if (!webinar) {
       return res.status(404).send("Details not found for the webinar.");
     }
-    if(mentor.isPremium === false){
+    if (mentor.isPremium === false) {
       return res.status(400).send("Subscribe to any of our plans to create a webinar.")
     }
     //add webinar limits as per mentor subscription
     console.log("1");
+
     // Parse the UTC date strings to Date objects
     const startTimeUTC = new Date(webinar.startTime);
     const endTimeUTC = new Date(webinar.endTime);
 
     // Calculate the IST offset in milliseconds (5 hours and 30 minutes)
-    const istOffset = 5 * 60 * 60 * 1000 + 30 * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+   // 5 hours and 30 minutes in milliseconds
 
     // Add the IST offset to the UTC date objects
-    const startTimeIST = new Date(startTimeUTC.getTime() + istOffset);
-    const endTimeIST = new Date(endTimeUTC.getTime() + istOffset);
+    const startTimeIST = new Date(startTimeUTC.getTime() );
+    const endTimeIST = new Date(endTimeUTC.getTime() );
+    console.log("01")
+    const formattedDate = `${startTimeIST.getDate()}/${startTimeIST.getMonth() + 1}/${startTimeIST.getFullYear()}`;
 
+    console.log("02")
+    console.log("2");
+    try {
+      const Jimp = require("jimp")
+
+      const image = await Jimp.read("./webinar.jpg")
+
+      const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+      const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE)
+
+      image.print(sm, 30, 20, "Surely Work | Webinar");
+      image.print(
+        lg,
+        30,
+        130,
+        {
+          text: webinar.title,
+          alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT,
+          alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
+        }, 800)
+      image.print(sm, 30, 400, `${formattedDate}`)
+      image.print(sm, 400, 400, user.name)
+      image.write("webinar-edited.jpg")
+
+      try {
+        const newPic = await cloudinary.uploader.upload("webinar-edited.jpg", {
+          folder: "LearnDuke",
+          width: 150,
+          crop: "scale",
+        });
+
+        webinar.photo = {
+          public_id: newPic.public_id,
+          url: newPic.secure_url,
+        };
+        console.log("4");
+      } catch (uploadError) {
+        console.log("Error uploading new profile photo:", uploadError);
+      }
+
+      console.log("5");
+    } catch (err) {
+      console.log(err)
+    }
+
+    console.log("6");
     // Convert to ISO strings if necessary (for example, to store in a database)
     webinar.startTime = startTimeIST.toISOString();
     webinar.endTime = endTimeIST.toISOString();
-    console.log("2");
 
     const newWebinar = new Webinar({
       ...webinar,
+      liveLink: "sample",
       creator: {
-        id: user._id,
+        id: mentor._id,
         name: user.name,
         photo: mentor.profilePhoto.url,
       },
     });
+    console.log("7");
     user.myWebinars.unshift(newWebinar._id);
 
     await newWebinar.save();
@@ -1271,11 +1318,12 @@ app.post("/create-webinar", async (req, res) => {
     console.log(authUrl)
     res.status(200).send(authUrl);
 
-    
+
   } catch (error) {
     return res.status(500).send(error);
   }
 });
+
 
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
@@ -1302,7 +1350,7 @@ app.delete("/delete-webinar", async (req, res) => {
 });
 
 //get live webinars 
-app.get("/live-webinars", async (req,res) => {
+app.get("/live-webinars", async (req, res) => {
   try {
     const webinars = await Webinar.find({ status: "Live" });
     return res.status(200).send(webinars);
@@ -1332,95 +1380,95 @@ app.get("/past-webinars", async (req, res) => {
 });
 
 // get my webinars
-app.get("/get-my-webinars/:id", async(req,res) => {
-   try {
-    const {id} = req.params;
-    const user = await User.findOne({email: id});
-    if(!user){
+app.get("/get-my-webinars/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ email: id });
+    if (!user) {
       return res.status(404).send("User not found");
     }
     const webinars = [];
-    
-    user.myWebinars.forEach(async(obj)=> {
-      const webinar = await Webinar.findById({_id: obj.id});
+
+    user.myWebinars.forEach(async (obj) => {
+      const webinar = await Webinar.findById({ _id: obj.id });
       webinars.push(webinar);
     })
 
     return res.status(200).send(webinars);
-   } catch (error) {
+  } catch (error) {
     return res.status(500).send("Internal server error")
-   }
+  }
 })
 
 //get registered webinars 
-app.get("/my-registered-webinars", async(req,res)=>{
+app.get("/my-registered-webinars", async (req, res) => {
   try {
-    const {id} = req.params;
-    const user = await User.findOne({email: id});
-    if(!user){
+    const { id } = req.params;
+    const user = await User.findOne({ email: id });
+    if (!user) {
       return res.status(404).send("User not found");
     }
     const webinars = [];
-    
-    user.joinedWebinars.forEach(async(obj)=> {
-      const webinar = await Webinar.findById({_id: obj.id});
+
+    user.joinedWebinars.forEach(async (obj) => {
+      const webinar = await Webinar.findById({ _id: obj.id });
       webinars.push(webinar);
     })
 
     return res.status(200).send(webinars);
-   } catch (error) {
+  } catch (error) {
     return res.status(500).send("Internal server error")
-   }
+  }
 })
 
 //register for a webinar
-app.post("/register-for-webinar", async(req,res) => {
+app.post("/register-for-webinar", async (req, res) => {
   try {
-    const {webinarId, mail} = req.body;
-    const user = await User.findOne({email: mail});
-    if(!user){
+    const { webinarId, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
       return res.status(404).send("User not found");
     }
-    const webinar = await Webinar.findOne({_id: webinarId});
-    if(webinar.creator.id === user._id){
+    const webinar = await Webinar.findOne({ _id: webinarId });
+    if (webinar.creator.id === user._id) {
       return res.status(302).send("You are the creator of webinar.")
     }
-    if(!webinar){
+    if (!webinar) {
       return res.status(404).send("Webinar not found");
     }
-    if(webinar.status === "Past"){
+    if (webinar.status === "Past") {
       return res.status(400).send("Webinar has ended");
     }
-    if(webinar.participants.includes(user._id)){
+    if (webinar.participants.includes(user._id)) {
       return res.status(400).send("User has already joined the webinar");
     }
     webinar.participants.push(user._id);
 
     await webinar.save();
     return res.status(200).send("User joined the webinar successfully");
-  }catch(error){
+  } catch (error) {
     return res.status(500).send("Internal server error")
   }
 })
 
 // is eligible to join webinar
-app.post("/isEligible", async(req,res)=> {
+app.post("/isEligible", async (req, res) => {
   try {
-    const {mail, webinarId} = req.body;
-    const user = await User.findOne({ email: mail})
-    if(!user){
+    const { mail, webinarId } = req.body;
+    const user = await User.findOne({ email: mail })
+    if (!user) {
       return res.status(404).send("User not found")
     }
-    const webinar = await Webinar.findById({_id: webinarId});
-    if(!webinar){
+    const webinar = await Webinar.findById({ _id: webinarId });
+    if (!webinar) {
       return res.status(404).send("Webinar not found")
     }
     const isRegistered = await webinar.participants.includes(user._id.toString());
     const isCreator = webinar.creator.id.toString() === user._id.toString();
 
-    if(isRegistered || isCreator){
+    if (isRegistered || isCreator) {
       return res.status(200).send(true)
-    }      
+    }
     return res.status(201).send(false)
   } catch (error) {
     return res.status(500).send("Internal server error")
@@ -1433,17 +1481,17 @@ const updateWebinarStatus = async () => {
   const istTime = new Date(time.getTime() + 5.5 * 60 * 60 * 1000);
   const webinars = await Webinar.find();
   webinars.forEach(async (webinar) => {
-    if(webinar.status === "Past"){
+    if (webinar.status === "Past") {
       return;
     }
     if (
-      istTime> webinar.startTime.getTime() &&
-      istTime< webinar.endTime.getTime() && webinar.status !== "Live"
+      istTime > webinar.startTime.getTime() &&
+      istTime < webinar.endTime.getTime() && webinar.status !== "Live"
     ) {
       webinar.status = "Live";
       await webinar.save();
     }
-    if (istTime> webinar.endTime.getTime()) {
+    if (istTime > webinar.endTime.getTime()) {
       webinar.status = "Past";
       webinar.liveLink = "past";
       await webinar.save();
@@ -1464,7 +1512,7 @@ app.get("/getWebinar/:id", async (req, res) => {
     }
 
     console.log(`Webinar Creator ID: ${webinar.creator.id.toString()}`);
-    
+
     // Assuming Mentor model uses ObjectId type for id
     const mentor = await Mentor.findOne({ _id: webinar.creator.id });
     if (!mentor) {
@@ -1479,10 +1527,40 @@ app.get("/getWebinar/:id", async (req, res) => {
 });
 
 
+app.post("/unregister-for-webinar", async(req,res) => {
+  try {
+    const {webinarId, mail} = req.body;
+    const user = await User.findOne({email: mail});
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    const webinar = await Webinar.findOne({_id: webinarId});
+    if(webinar.creator.id === user._id){
+      return res.status(302).send("You are the creator of webinar.")
+    }
+    if(!webinar){
+      return res.status(404).send("Webinar not found");
+    }
+    if(webinar.status === "Past"){
+      return res.status(400).send("Webinar has ended");
+    }
+    if(!webinar.participants.includes(user._id)){
+      return res.status(400).send("User has already unregistered for the webinar");
+    }
+    await Webinar.updateOne({_id: webinarId}, {$pull: {participants: user._id}});
+    
+    await webinar.save();
+    return res.status(200).send("User unregistered from the webinar successfully");
+  }catch(error){
+    return res.status(500).send("Internal server error")
+  }
+})
+
+
 /* -------------------------------------------------------------------------- */
 
 app.get("/", (req, res) => {
-    res.send("Home Page");
+  res.send("Home Page");
 });
 
 // Start server
