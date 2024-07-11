@@ -155,7 +155,7 @@ app.get(
   (req, res) => {
     // Successful authentication, redirect to home page or handle as needed
     res.redirect(
-      `https://learnduke-frontend.vercel.app/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
+      `${process.env.FRONTEND_URLTEST}/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
     );
   }
 );
@@ -1005,17 +1005,17 @@ app.get(
               await user.save();
             }
             res.redirect(
-              `https://learnduke-frontend.vercel.app/paymentsuccess`
+              `${process.env.FRONTEND_URLTEST}/paymentsuccess`
             );
           } else if (response.data.code === "PAYMENT_ERROR") {
-            res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+            res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
           }
         })
         .catch(function (error) {
-          res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+          res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
         });
     } else {
-      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
     }
   }
 );
@@ -1075,14 +1075,14 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
   if (!plan) {
     res
       .status(404)
-      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
 
   const user = await User.findOne({ email: mail });
   if (!user) {
     res
       .status(404)
-      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
   const endPoint = "/pg/v1/pay";
 
@@ -1131,7 +1131,7 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     .catch(function (error) {
       res
         .status(500)
-        .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+        .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
     });
 });
 
@@ -1713,7 +1713,7 @@ app.get("/pay/webinar", async (req, res) => {
     console.log(error);
     res
       .status(500)
-      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
 });
 {
@@ -1772,22 +1772,22 @@ app.get(
           webinar.participants.unshift(user._id);
           await user.save();
           await webinar.save();
-          res.redirect(`https://learnduke-frontend.vercel.app/paymentsuccess`);
+          res.redirect(`${process.env.FRONTEND_URLTEST}/paymentsuccess`);
         } else if (response.data.code === "PAYMENT_ERROR") {
           return res.redirect(
-            "https://learnduke-frontend.vercel.app/paymentfailed"
+            `${process.env.FRONTEND_URLTEST}/paymentfailed`
           );
         }
       } else {
         return res.redirect(
-          "https://learnduke-frontend.vercel.app/paymentfailed"
+          `${process.env.FRONTEND_URLTEST}/paymentfailed`
         );
       }
     } catch (error) {
       console.log(error);
       if (!res.headersSent) {
         return res.redirect(
-          "https://learnduke-frontend.vercel.app/paymentfailed"
+          `${process.env.FRONTEND_URLTEST}/paymentfailed`
         );
       }
     }
