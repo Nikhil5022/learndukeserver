@@ -1353,7 +1353,7 @@ app.post("/create-webinar", async (req, res) => {
       const formattedDate = formatWebinarDate(startTimeUTC);
       await processWebinarImage(webinar.title, user.name, formattedDate);
 
-      webinar =  await uploadWebinarImage(EDITED_IMAGE_PATH, webinar);
+      webinar =  await uploadWebinarImage(webinar-edited.jpg, webinar);
 
     } catch (err) {
       console.error("Error processing webinar image:", err);
