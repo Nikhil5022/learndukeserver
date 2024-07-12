@@ -1760,7 +1760,7 @@ app.get("/pay/webinar", async (req, res) => {
       merchantTransactionId: merchantTransactionId,
       merchantUserId: userId,
       amount: parseInt(webinar.price) * 100, // in paise
-      redirectUrl: `http://localhost:3000/redirect-url/${merchantTransactionId}/${webinar._id}/${user._id}`,
+      redirectUrl: `https://learndukeserver-test.vercel.app/redirect-url/${merchantTransactionId}/${webinar._id}/${user._id}`,
       redirectMode: "REDIRECT",
       mobileNumber: "1111111111", // to be clarified.
       paymentInstrument: {
@@ -1854,7 +1854,7 @@ app.get(
           webinar.participants.unshift(user._id);
           await user.save();
           await webinar.save();
-          res.redirect(`${process.env.FRONTEND_URLTEST}/paymentsuccess`);
+          res.redirect(`${process.env.FRONTEND_URLTEST}/detailedWebinar/${webinarId}`);
         } else if (response.data.code === "PAYMENT_ERROR") {
           return res.redirect(
             `${process.env.FRONTEND_URLTEST}/paymentfailed`
