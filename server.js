@@ -1384,7 +1384,7 @@ async function processWebinarImage(webinar, userName, formattedDate) {
 
 async function uploadWebinarImage(imagePath) {
   const newPic = await cloudinary.uploader.upload(imagePath, {
-    folder: "LearnDuke,
+    folder: "LearnDuke",
     width: 150,
     crop: "scale",
   });
