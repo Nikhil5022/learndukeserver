@@ -906,13 +906,15 @@ app.get("/getMentor", async (req, res) => {
       .limit(limit)
       .skip(startIndex)
       .exec();
+
     const premiummentor = mentors.filter((mentor) => mentor.isPremium === true);
 
-    const totalPages = Math.ceil(premiummentor.length / limit);
+    const totalMentor = await Mentor.countDocuments(query);
+    const totalPages = Math.ceil(totalMentor/limit);
 
     res.send({
       startIndex,
-      totalmentor: premiummentor.length,
+      totalmentor: totalMentor,
       totalPages,
       mentors: premiummentor.filter(Boolean), // Filter out null or undefined values
     });
@@ -1329,7 +1331,6 @@ app.get("/create-meet-event", async (req, res) => {
 
 const IMAGE_PATH = "./webinar.jpg";
 const EDITED_IMAGE_PATH = "webinar-edited.jpg";
-const CLOUDINARY_FOLDER = "LearnDuke";
 
 app.post("/create-webinar", async (req, res) => {
   try {
@@ -1348,7 +1349,7 @@ app.post("/create-webinar", async (req, res) => {
 
     try {
       const formattedDate = formatWebinarDate(startTimeUTC);
-      await processWebinarImage(webinar, user.name, formattedDate);
+      await processWebinarImage(webinar.title, user.name, formattedDate);
       const photo = await uploadWebinarImage(EDITED_IMAGE_PATH);
       webinar.photo = photo;
     } catch (err) {
@@ -1370,13 +1371,13 @@ app.post("/create-webinar", async (req, res) => {
   }
 });
 
-async function processWebinarImage(webinar, userName, formattedDate) {
+async function processWebinarImage(title, userName, formattedDate) {
   const image = await Jimp.read(IMAGE_PATH);
   const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
   const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
 
   image.print(sm, 30, 20, "Surely Work | Webinar")
-       .print(lg, 30, 130, { text: webinar.title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
+       .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
        .print(sm, 30, 400, formattedDate)
        .print(sm, 400, 400, userName)
        .write(EDITED_IMAGE_PATH);
@@ -1384,11 +1385,15 @@ async function processWebinarImage(webinar, userName, formattedDate) {
 
 async function uploadWebinarImage(imagePath) {
   const newPic = await cloudinary.uploader.upload(imagePath, {
-    folder: CLOUDINARY_FOLDER,
+    folder: "LearnDuke",
     width: 150,
     crop: "scale",
   });
-  return { public_id: newPic.public_id, url: newPic.secure_url };
+  let photo = await {
+    public_id: newPic.public_id,
+    url: newPic.secure_url
+  }
+  return photo;
 }
 
 function formatWebinarDate(date) {
