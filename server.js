@@ -1231,113 +1231,190 @@ app.get("/create-meet-event", async (req, res) => {
   }
 });
 
-{
-  /* /* --------------------------changed------------------------------- */
-}
 //create webinar
+// app.post("/create-webinar", async (req, res) => {
+//   try {
+//     const { mail, webinar } = req.body;
+//     const [mentor, user] = await Promise.all([
+//       Mentor.findOne({ email: mail }),
+//       User.findOne({ email: mail }),
+//     ]);
+//     if (!mentor || !user) {
+//       return res.status(404).send("Mentor not found");
+//     }
+//     if (!webinar) {
+//       return res.status(404).send("Details not found for the webinar.");
+//     }
+//     if (mentor.isPremium === false) {
+//       return res
+//         .status(400)
+//         .send("Subscribe to any of our plans to create a webinar.");
+//     }
+//     //add webinar limits as per mentor subscription
+//     // Parse the UTC date strings to Date objects
+//     const startTimeUTC = new Date(webinar.startTime);
+//     const endTimeUTC = new Date(webinar.endTime);
+
+//     // Calculate the IST offset in milliseconds (5 hours and 30 minutes)1000; // 5 hours and 30 minutes in milliseconds
+//     console.log("01");
+//     const formattedDate = `${startTimeUTC.getDate()}/${
+//       startTimeUTC.getMonth() + 1
+//     }/${startTimeUTC.getFullYear()}`;
+//     try {
+//       const image = await Jimp.read("./webinar.jpg");
+
+//       const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+//       const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+
+//       await image.print(sm, 30, 20, "Surely Work | Webinar")
+//       .print(lg,30,130,{text: webinar.title,
+//           alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT,
+//           alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
+//         },800)
+//         .print(sm, 30, 400, `${formattedDate}`)
+//         .print(sm, 400, 400, user.name)
+//         .write("webinar-edited.jpg");
+
+//       try {
+//         const newPic = await cloudinary.uploader.upload("webinar-edited.jpg", {
+//           folder: "LearnDuke",
+//           width: 150,
+//           crop: "scale",
+//         });
+
+//         webinar.photo = {
+//           public_id: newPic.public_id,
+//           url: newPic.secure_url,
+//         };
+//         console.log("4");
+//       } catch (uploadError) {
+//         console.log("Error uploading new profile photo:", uploadError);
+//       }
+
+//       console.log("5");
+//     } catch (err) {
+//       console.log(err);
+//     }
+
+//     console.log("6");
+//     // Convert to ISO strings if necessary (for example, to store in a database)
+//     webinar.startTime = startTimeUTC;
+//     webinar.endTime = endTimeUTC;
+
+//     const newWebinar = new Webinar({
+//       ...webinar,
+//       liveLink: "sample",
+//       creator: {
+//         id: mentor._id,
+//         name: user.name,
+//         photo: mentor.profilePhoto.url,
+//       },
+//       participants: [user._id],
+//     });
+//     user.myWebinars.unshift(newWebinar._id);
+
+//     await newWebinar.save();
+//     await user.save();
+
+//     const authUrl = oauth2Client.generateAuthUrl({
+//       access_type: "offline",
+//       scope: SCOPES,
+//       state: JSON.stringify({ webinarId: newWebinar._id }),
+//     });
+//     res.status(200).send(authUrl);
+//   } catch (error) {
+//     return res.status(500).send(error);
+//   }
+// });
+
+const IMAGE_PATH = "./webinar.jpg";
+const EDITED_IMAGE_PATH = "webinar-edited.jpg";
+const CLOUDINARY_FOLDER = "LearnDuke";
+
 app.post("/create-webinar", async (req, res) => {
   try {
     const { mail, webinar } = req.body;
-    const mentor = await Mentor.findOne({ email: mail });
-    const user = await User.findOne({ email: mail });
-    if (!mentor || !user) {
-      return res.status(404).send("Mentor not found");
-    }
-    if (!webinar) {
-      return res.status(404).send("Details not found for the webinar.");
-    }
-    if (mentor.isPremium === false) {
-      return res
-        .status(400)
-        .send("Subscribe to any of our plans to create a webinar.");
-    }
-    //add webinar limits as per mentor subscription
-    // Parse the UTC date strings to Date objects
+    const [mentor, user] = await Promise.all([
+      Mentor.findOne({ email: mail }),
+      User.findOne({ email: mail }),
+    ]);
+
+    if (!mentor || !user) return res.status(404).send("Mentor not found");
+    if (!webinar) return res.status(404).send("Details not found for the webinar.");
+    if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
+
     const startTimeUTC = new Date(webinar.startTime);
     const endTimeUTC = new Date(webinar.endTime);
 
-    // Calculate the IST offset in milliseconds (5 hours and 30 minutes)1000; // 5 hours and 30 minutes in milliseconds
-    console.log("01");
-    const formattedDate = `${startTimeUTC.getDate()}/${
-      startTimeUTC.getMonth() + 1
-    }/${startTimeUTC.getFullYear()}`;
     try {
-      const image = await Jimp.read("./webinar.jpg");
-
-      const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-      const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-
-      image.print(sm, 30, 20, "Surely Work | Webinar");
-      image.print(
-        lg,
-        30,
-        130,
-        {
-          text: webinar.title,
-          alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT,
-          alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
-        },
-        800
-      );
-      image.print(sm, 30, 400, `${formattedDate}`);
-      image.print(sm, 400, 400, user.name);
-      image.write("webinar-edited.jpg");
-
-      try {
-        const newPic = await cloudinary.uploader.upload("webinar-edited.jpg", {
-          folder: "LearnDuke",
-          width: 150,
-          crop: "scale",
-        });
-
-        webinar.photo = {
-          public_id: newPic.public_id,
-          url: newPic.secure_url,
-        };
-        console.log("4");
-      } catch (uploadError) {
-        console.log("Error uploading new profile photo:", uploadError);
-      }
-
-      console.log("5");
+      const formattedDate = formatWebinarDate(startTimeUTC);
+      await processWebinarImage(webinar, user.name, formattedDate);
+      const photo = await uploadWebinarImage(EDITED_IMAGE_PATH);
+      webinar.photo = photo;
     } catch (err) {
-      console.log(err);
+      console.error("Error processing webinar image:", err);
     }
 
-    console.log("6");
-    // Convert to ISO strings if necessary (for example, to store in a database)
     webinar.startTime = startTimeUTC;
     webinar.endTime = endTimeUTC;
 
-    const newWebinar = new Webinar({
-      ...webinar,
-      liveLink: "sample",
-      creator: {
-        id: mentor._id,
-        name: user.name,
-        photo: mentor.profilePhoto.url,
-      },
-      participants: [user._id],
-    });
+    const newWebinar = await createAndSaveWebinar(webinar, mentor, user);
     user.myWebinars.unshift(newWebinar._id);
-
-    await newWebinar.save();
     await user.save();
 
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: SCOPES,
-      state: JSON.stringify({ webinarId: newWebinar._id }),
-    });
-    console.log(authUrl);
+    const authUrl = generateAuthUrl(newWebinar._id);
     res.status(200).send(authUrl);
   } catch (error) {
+    console.error("Error creating webinar:", error);
     return res.status(500).send(error);
   }
 });
-{
-  /* /* --------------------------changed------------------------------- */
+
+async function processWebinarImage(webinar, userName, formattedDate) {
+  const image = await Jimp.read(IMAGE_PATH);
+  const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+  const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+
+  image.print(sm, 30, 20, "Surely Work | Webinar")
+       .print(lg, 30, 130, { text: webinar.title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
+       .print(sm, 30, 400, formattedDate)
+       .print(sm, 400, 400, userName)
+       .write(EDITED_IMAGE_PATH);
 }
+
+async function uploadWebinarImage(imagePath) {
+  const newPic = await cloudinary.uploader.upload(imagePath, {
+    folder: CLOUDINARY_FOLDER,
+    width: 150,
+    crop: "scale",
+  });
+  return { public_id: newPic.public_id, url: newPic.secure_url };
+}
+
+function formatWebinarDate(date) {
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+}
+
+async function createAndSaveWebinar(webinarDetails, mentor, user) {
+  const newWebinar = new Webinar({
+    ...webinarDetails,
+    liveLink: "sample",
+    creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
+    participants: [user._id],
+  });
+  await newWebinar.save();
+  return newWebinar;
+}
+
+function generateAuthUrl(webinarId) {
+  return oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: SCOPES,
+    state: JSON.stringify({ webinarId }),
+  });
+}
+
+  /* /* --------------------------changed------------------------------- */
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
   try {

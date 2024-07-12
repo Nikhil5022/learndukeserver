@@ -403,7 +403,7 @@ const webinarSchema = new mongoose.Schema({
       type: String,
       
     },
-    description: {
+    descriptions: {
       type: [String],
     } 
   }],
