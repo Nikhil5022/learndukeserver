@@ -1355,11 +1355,18 @@ app.post("/create-webinar", async (req, res) => {
     } catch (err) {
       console.error("Error processing webinar image:", err);
     }
-
+    
     webinar.startTime = startTimeUTC;
     webinar.endTime = endTimeUTC;
+    
+    const newWebinar = await Webinar({
+      ...webinar,
+      liveLink: "sample",
+      creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
+      participants: [user._id],
+    });
 
-    const newWebinar = await createAndSaveWebinar(webinar, mentor, user);
+    await newWebinar.save();
     user.myWebinars.unshift(newWebinar._id);
     await user.save();
 
@@ -1389,7 +1396,7 @@ async function uploadWebinarImage(imagePath) {
     width: 150,
     crop: "scale",
   });
-  let photo = await {
+  let photo = {
     public_id: newPic.public_id,
     url: newPic.secure_url
   }
@@ -1400,16 +1407,6 @@ function formatWebinarDate(date) {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
 
-async function createAndSaveWebinar(webinarDetails, mentor, user) {
-  const newWebinar = new Webinar({
-    ...webinarDetails,
-    liveLink: "sample",
-    creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
-    participants: [user._id],
-  });
-  await newWebinar.save();
-  return newWebinar;
-}
 
 function generateAuthUrl(webinarId) {
   return oauth2Client.generateAuthUrl({
