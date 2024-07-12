@@ -1346,20 +1346,26 @@ app.post("/create-webinar", async (req, res) => {
 
     const startTimeUTC = new Date(webinar.startTime);
     const endTimeUTC = new Date(webinar.endTime);
+    webinar.startTime = startTimeUTC;
+    webinar.endTime = endTimeUTC;
 
     try {
       const formattedDate = formatWebinarDate(startTimeUTC);
       await processWebinarImage(webinar.title, user.name, formattedDate);
-      const photo = await uploadWebinarImage(EDITED_IMAGE_PATH);
-      webinar.photo = photo;
+
+      webinar =  await uploadWebinarImage(EDITED_IMAGE_PATH, webinar);
+
     } catch (err) {
       console.error("Error processing webinar image:", err);
     }
-
-    webinar.startTime = startTimeUTC;
-    webinar.endTime = endTimeUTC;
-
-    const newWebinar = await createAndSaveWebinar(webinar, mentor, user);
+    console.log(webinar)
+    const newWebinar = await Webinar({
+      ...webinar,
+      liveLink: "sample",
+      creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
+      participants: [user._id],
+    });
+    await newWebinar.save();
     user.myWebinars.unshift(newWebinar._id);
     await user.save();
 
@@ -1383,33 +1389,23 @@ async function processWebinarImage(title, userName, formattedDate) {
        .write(EDITED_IMAGE_PATH);
 }
 
-async function uploadWebinarImage(imagePath) {
+async function uploadWebinarImage(imagePath, webinar) {
   const newPic = await cloudinary.uploader.upload(imagePath, {
     folder: "LearnDuke",
     width: 150,
     crop: "scale",
   });
-  let photo = await {
+  webinar.photo = {
     public_id: newPic.public_id,
     url: newPic.secure_url
   }
-  return photo;
+  return webinar;
 }
 
 function formatWebinarDate(date) {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
 
-async function createAndSaveWebinar(webinarDetails, mentor, user) {
-  const newWebinar = new Webinar({
-    ...webinarDetails,
-    liveLink: "sample",
-    creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
-    participants: [user._id],
-  });
-  await newWebinar.save();
-  return newWebinar;
-}
 
 function generateAuthUrl(webinarId) {
   return oauth2Client.generateAuthUrl({
