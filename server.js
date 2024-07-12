@@ -1330,7 +1330,7 @@ app.get("/create-meet-event", async (req, res) => {
 // });
 
 const IMAGE_PATH = "./webinar.jpg";
-const EDITED_IMAGE_PATH = "webinar-edited.jpg";
+const EDITED_IMAGE_PATH = "./webinar-edited.jpg";
 
 app.post("/create-webinar", async (req, res) => {
   try {
