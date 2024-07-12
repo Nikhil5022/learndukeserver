@@ -1565,6 +1565,18 @@ app.get("/my-registered-webinars", async (req, res) => {
   }
 });
 
+app.get("/getWhatsappNumber/:id", async (req, res) => {
+  try {
+    const mentor = await Mentor.findById(req.params.id);
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+    res.status(200).send(mentor.whatsappNumber);
+  } catch (err) {
+    res.send(err);
+  }
+});
+
 {
   /* /* --------------------------changed------------------------------- */
 }
