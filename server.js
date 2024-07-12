@@ -523,7 +523,7 @@ app.get("/getReviewedJobs", async (req, res) => {
       domain,
       education,
       page = 1,
-      limit = 1,
+      limit = 8,
     } = req.query;
 
     let query = {};
