@@ -30,10 +30,9 @@ const app = express();
 const axios = require("axios");
 const uniqid = require("uniqid");
 const sha256 = require("sha256");
-{
-  /* /* --------------------------changed------------------------------- */
-}
+const streamifier = require('streamifier');
 const Jimp = require("jimp");
+
 app.use(cors("*"));
 
 let MENTORVALIDITY = 0;
@@ -1137,23 +1136,6 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     });
 });
 
-/* ---------------------------For Webinars-------------------------------- */
-
-{
-  /* /* --------------------------changed------------------------------- */
-}
-// app.get("/mentor/contact/:id", async (req,res)=>{
-//   try{
-//     // const mentor = await Mentor.findOne()
-//     if(!mentor){
-//       return res.status(404).send("Mentor not found")
-//     }
-//     res.status(200).send(mentor.whatsappNumber)
-//   }catch(err){
-//     res.send(err)
-//   }
-// })
-
 const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
 const oauth2Client = new google.auth.OAuth2(
@@ -1227,185 +1209,120 @@ app.get("/create-meet-event", async (req, res) => {
     }
     const event = await createMeetEvent(oauth2Client, webinar);
     console.log(event);
-    res.redirect("http://localhost:5173/webinars/");
+    res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
     res.status(500).send("Error creating event");
   }
 });
 
-//create webinar
-// app.post("/create-webinar", async (req, res) => {
-//   try {
-//     const { mail, webinar } = req.body;
-//     const [mentor, user] = await Promise.all([
-//       Mentor.findOne({ email: mail }),
-//       User.findOne({ email: mail }),
-//     ]);
-//     if (!mentor || !user) {
-//       return res.status(404).send("Mentor not found");
-//     }
-//     if (!webinar) {
-//       return res.status(404).send("Details not found for the webinar.");
-//     }
-//     if (mentor.isPremium === false) {
-//       return res
-//         .status(400)
-//         .send("Subscribe to any of our plans to create a webinar.");
-//     }
-//     //add webinar limits as per mentor subscription
-//     // Parse the UTC date strings to Date objects
-//     const startTimeUTC = new Date(webinar.startTime);
-//     const endTimeUTC = new Date(webinar.endTime);
-
-//     // Calculate the IST offset in milliseconds (5 hours and 30 minutes)1000; // 5 hours and 30 minutes in milliseconds
-//     console.log("01");
-//     const formattedDate = `${startTimeUTC.getDate()}/${
-//       startTimeUTC.getMonth() + 1
-//     }/${startTimeUTC.getFullYear()}`;
-//     try {
-//       const image = await Jimp.read("./webinar.jpg");
-
-//       const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-//       const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-
-//       await image.print(sm, 30, 20, "Surely Work | Webinar")
-//       .print(lg,30,130,{text: webinar.title,
-//           alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT,
-//           alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
-//         },800)
-//         .print(sm, 30, 400, `${formattedDate}`)
-//         .print(sm, 400, 400, user.name)
-//         .write("webinar-edited.jpg");
-
-//       try {
-//         const newPic = await cloudinary.uploader.upload("webinar-edited.jpg", {
-//           folder: "LearnDuke",
-//           width: 150,
-//           crop: "scale",
-//         });
-
-//         webinar.photo = {
-//           public_id: newPic.public_id,
-//           url: newPic.secure_url,
-//         };
-//         console.log("4");
-//       } catch (uploadError) {
-//         console.log("Error uploading new profile photo:", uploadError);
-//       }
-
-//       console.log("5");
-//     } catch (err) {
-//       console.log(err);
-//     }
-
-//     console.log("6");
-//     // Convert to ISO strings if necessary (for example, to store in a database)
-//     webinar.startTime = startTimeUTC;
-//     webinar.endTime = endTimeUTC;
-
-//     const newWebinar = new Webinar({
-//       ...webinar,
-//       liveLink: "sample",
-//       creator: {
-//         id: mentor._id,
-//         name: user.name,
-//         photo: mentor.profilePhoto.url,
-//       },
-//       participants: [user._id],
-//     });
-//     user.myWebinars.unshift(newWebinar._id);
-
-//     await newWebinar.save();
-//     await user.save();
-
-//     const authUrl = oauth2Client.generateAuthUrl({
-//       access_type: "offline",
-//       scope: SCOPES,
-//       state: JSON.stringify({ webinarId: newWebinar._id }),
-//     });
-//     res.status(200).send(authUrl);
-//   } catch (error) {
-//     return res.status(500).send(error);
-//   }
-// });
-
-const IMAGE_PATH = "./webinar.jpg";
-const EDITED_IMAGE_PATH = "webinar-edited.jpg";
+const IMAGE_PATH = "./webinar.jpg"
 
 app.post("/create-webinar", async (req, res) => {
   try {
+    console.log("Starting create-webinar endpoint");
+
     const { mail, webinar } = req.body;
+    if (!webinar) return res.status(404).send("Details not found for the webinar.");
+
+    console.log("Fetching mentor and user");
     const [mentor, user] = await Promise.all([
       Mentor.findOne({ email: mail }),
-      User.findOne({ email: mail }),
+      User.findOne({ email: mail })
     ]);
 
-    if (!mentor || !user) return res.status(404).send("Mentor not found");
-    if (!webinar) return res.status(404).send("Details not found for the webinar.");
+    if (!mentor) return res.status(404).send("Mentor not found");
+    if (!user) return res.status(404).send("User not found");
     if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
 
+    console.log("Processing dates");
     const startTimeUTC = new Date(webinar.startTime);
     const endTimeUTC = new Date(webinar.endTime);
     webinar.startTime = startTimeUTC;
     webinar.endTime = endTimeUTC;
 
-    try {
-      const formattedDate = formatWebinarDate(startTimeUTC);
-      await processWebinarImage(webinar.title, user.name, formattedDate);
+    let finalWebinar;
 
-      webinar =  await uploadWebinarImage(EDITED_IMAGE_PATH, webinar);
+    try {
+      console.log("Formatting date and processing image");
+      const formattedDate = formatWebinarDate(startTimeUTC);
+      const imageBuffer = await processWebinarImage(webinar.title, user.name, formattedDate);
+
+      finalWebinar =  await uploadWebinarImage(imageBuffer, webinar);
 
     } catch (err) {
       console.error("Error processing webinar image:", err);
+      return res.status(500).send("Error processing webinar image");
     }
-    console.log(webinar)
-    const newWebinar = await Webinar({
-      ...webinar,
-      liveLink: "sample",
+
+    console.log("Creating new webinar");
+    console.log(finalWebinar)
+    const newWebinar = new Webinar({
+      ...finalWebinar,
+      liveLink: "/",
       creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
-      participants: [user._id],
+      participants: [user._id]
     });
+
     await newWebinar.save();
     user.myWebinars.unshift(newWebinar._id);
     await user.save();
 
     const authUrl = generateAuthUrl(newWebinar._id);
+    console.log("Webinar created successfully");
     res.status(200).send(authUrl);
   } catch (error) {
     console.error("Error creating webinar:", error);
-    return res.status(500).send(error);
+    return res.status(500).send(error.message);
   }
 });
 
 async function processWebinarImage(title, userName, formattedDate) {
-  const image = await Jimp.read(IMAGE_PATH);
-  const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-  const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+  try {
+    console.log("Reading image");
+    const image = await Jimp.read(IMAGE_PATH);
+    const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+    const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
 
-  image.print(sm, 30, 20, "Surely Work | Webinar")
-       .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
-       .print(sm, 30, 400, formattedDate)
-       .print(sm, 400, 400, userName)
-       .write(EDITED_IMAGE_PATH);
+    console.log("Printing text on image");
+    image.print(sm, 30, 20, "Surely Work | Webinar")
+         .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
+         .print(sm, 30, 400, formattedDate)
+         .print(sm, 400, 400, userName);
+
+    console.log("Getting image buffer");
+    return await image.getBufferAsync(Jimp.MIME_JPEG);
+  } catch (error) {
+    console.error("Error processing webinar image:", error);
+    throw new Error("Error processing webinar image");
+  }
 }
 
-async function uploadWebinarImage(imagePath, webinar) {
-  const newPic = await cloudinary.uploader.upload(imagePath, {
-    folder: "LearnDuke",
-    width: 150,
-    crop: "scale",
+async function uploadWebinarImage(imageBuffer, webinar) {
+  return new Promise((resolve, reject) => {
+    console.log("Uploading image to Cloudinary");
+    const uploadStream = cloud.uploader.upload_stream(
+      { folder: "LearnDuke", width: 150, crop: "scale" },
+      (error, result) => {
+        if (error) {
+          console.error("Error uploading webinar photo:", error);
+          reject(new Error("Error uploading webinar photo:", error));
+        } else {
+          console.log("Image uploaded to Cloudinary successfully");
+          webinar.photo = {
+            public_id: result.public_id,
+            url: result.secure_url
+          }; 
+          resolve(webinar);
+        }
+      }
+    );
+    streamifier.createReadStream(imageBuffer).pipe(uploadStream);
   });
-  webinar.photo = {
-    public_id: newPic.public_id,
-    url: newPic.secure_url
-  }
-  return webinar;
 }
 
 function formatWebinarDate(date) {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
-
 
 function generateAuthUrl(webinarId) {
   return oauth2Client.generateAuthUrl({
@@ -1415,7 +1332,6 @@ function generateAuthUrl(webinarId) {
   });
 }
 
-  /* /* --------------------------changed------------------------------- */
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
   try {
@@ -1573,14 +1489,7 @@ app.get("/getWhatsappNumber/:id", async (req, res) => {
   }
 });
 
-{
-  /* /* --------------------------changed------------------------------- */
-}
-{
-  /* /* --------------------------changed------------------------------- */
-}
 //register for a webinar
-
 app.post("/register-for-webinar", async (req, res) => {
   try {
     const { webinarId, mail } = req.body;
@@ -1671,9 +1580,6 @@ app.post("/isEligible", async (req, res) => {
   }
 });
 
-{
-  /* /* --------------------------changed------------------------------- */
-}
 // updating the status of the webinar
 const updateWebinarStatus = async () => {
   try {
@@ -1730,9 +1636,6 @@ app.get("/getWebinar/:id", async (req, res) => {
   }
 });
 
-{
-  /* /* --------------------------changed------------------------------- */
-}
 app.get("/pay/webinar", async (req, res) => {
   try {
     const { webinarId, mail } = req.query;
@@ -1806,9 +1709,8 @@ app.get("/pay/webinar", async (req, res) => {
       .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
 });
-{
-  /* /* --------------------------changed------------------------------- */
-}
+
+
 app.get(
   "/redirect-url/:merchantTransactionId/:webinarId/:userId",
   async (req, res) => {
