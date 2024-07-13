@@ -30,6 +30,9 @@ const app = express();
 const axios = require("axios");
 const uniqid = require("uniqid");
 const sha256 = require("sha256");
+const streamifier = require('streamifier');
+const Jimp = require("jimp");
+
 app.use(cors("*"));
 
 let MENTORVALIDITY = 0;
@@ -45,10 +48,7 @@ app.use(
 );
 app.use(express.json());
 app.use(fileUpload());
-const { google } = require('googleapis');
-
-
-
+const { google } = require("googleapis");
 
 // Connect to MongoDB Atlas
 mongoose
@@ -85,7 +85,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://learndukeserver.vercel.app/auth/google/callback",
+      callbackURL: "https://learndukeserver-test.vercel.app/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -154,7 +154,7 @@ app.get(
   (req, res) => {
     // Successful authentication, redirect to home page or handle as needed
     res.redirect(
-      `https://learnduke-frontend.vercel.app/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
+      `${process.env.FRONTEND_URLTEST}/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
     );
   }
 );
@@ -905,13 +905,15 @@ app.get("/getMentor", async (req, res) => {
       .limit(limit)
       .skip(startIndex)
       .exec();
+
     const premiummentor = mentors.filter((mentor) => mentor.isPremium === true);
 
-    const totalPages = Math.ceil(premiummentor.length / limit);
+    const totalMentor = await Mentor.countDocuments(query);
+    const totalPages = Math.ceil(totalMentor/limit);
 
     res.send({
       startIndex,
-      totalmentor: premiummentor.length,
+      totalmentor: totalMentor,
       totalPages,
       mentors: premiummentor.filter(Boolean), // Filter out null or undefined values
     });
@@ -1004,17 +1006,17 @@ app.get(
               await user.save();
             }
             res.redirect(
-              `https://learnduke-frontend.vercel.app/paymentsuccess`
+              `${process.env.FRONTEND_URLTEST}/paymentsuccess`
             );
           } else if (response.data.code === "PAYMENT_ERROR") {
-            res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+            res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
           }
         })
         .catch(function (error) {
-          res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+          res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
         });
     } else {
-      res.redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      res.redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
     }
   }
 );
@@ -1074,14 +1076,14 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
   if (!plan) {
     res
       .status(404)
-      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
 
   const user = await User.findOne({ email: mail });
   if (!user) {
     res
       .status(404)
-      .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
   }
   const endPoint = "/pg/v1/pay";
 
@@ -1093,7 +1095,7 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
     amount: parseInt(plan.price) * 100, // in paise
-    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
+    redirectUrl: `https://learndukeserver-test.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
     paymentInstrument: {
@@ -1130,55 +1132,52 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     .catch(function (error) {
       res
         .status(500)
-        .redirect("https://learnduke-frontend.vercel.app/paymentfailed");
+        .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
     });
 });
 
-/* ---------------------------For Webinars-------------------------------- */
-
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.WEBCLIENT_ID,
   process.env.WEBCLIENT_SECRET,
   process.env.REDIRECT_URL
-)
+);
 
-async function createMeetEvent(auth,webinar) {
-  const calendar = google.calendar({ version: 'v3', auth });
+async function createMeetEvent(auth, webinar) {
+  const calendar = google.calendar({ version: "v3", auth });
 
   const event = {
     summary: webinar.title,
     start: {
       dateTime: webinar.startTime,
-      timeZone: 'Asia/Kolkata',
+      timeZone: "Asia/Kolkata",
     },
     end: {
       dateTime: webinar.endTime,
-      timeZone: 'Asia/Kolkata',
+      timeZone: "Asia/Kolkata",
     },
     conferenceData: {
       createRequest: {
         conferenceSolutionKey: {
-          type: 'hangoutsMeet'
+          type: "hangoutsMeet",
         },
-        requestId: 'Surelywork_webinar'
-      }
+        requestId: "Surelywork_webinar",
+      },
     },
     attendees: [],
   };
-  
 
   try {
     const response = await calendar.events.insert({
-      calendarId: 'primary',
+      calendarId: "primary",
       resource: event,
       conferenceDataVersion: 1,
     });
     console.log(response.data);
     return response.data;
   } catch (error) {
-    console.error('Error creating event: ', error);
+    console.error("Error creating event: ", error);
     throw error;
   }
 }
@@ -1192,90 +1191,146 @@ async function createMeetEvent(auth,webinar) {
 //   res.redirect(authUrl);
 // });
 
-app.get('/oauth2callback', async (req, res) => {
-  const { code,state } = req.query;
+app.get("/oauth2callback", async (req, res) => {
+  const { code, state } = req.query;
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
-  console.log(req.body)
+  console.log(req.body);
   const { webinarId } = JSON.parse(state);
   res.redirect(`/create-meet-event?webinarId=${webinarId}`);
 });
 
-app.get('/create-meet-event', async (req, res) => {
+app.get("/create-meet-event", async (req, res) => {
   try {
     const { webinarId } = req.query;
     const webinar = await Webinar.findById(webinarId);
     if (!webinar) {
-      return res.status(404).send('Webinar not found');
+      return res.status(404).send("Webinar not found");
     }
-    const event = await createMeetEvent(oauth2Client,webinar);
-    console.log(event)
-    res.redirect('http://localhost:5173/webinars/');
+    const event = await createMeetEvent(oauth2Client, webinar);
+    console.log(event);
+    res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
-    res.status(500).send('Error creating event');
+    res.status(500).send("Error creating event");
   }
 });
 
+const IMAGE_PATH = "./webinar.jpg"
 
-//create webinar
 app.post("/create-webinar", async (req, res) => {
   try {
+    console.log("Starting create-webinar endpoint");
+
     const { mail, webinar } = req.body;
-    const mentor = await Mentor.findOne({ email: mail });
-    const user = await User.findOne({email: mail})
-    if (!mentor || !user) {
-      return res.status(404).send("Mentor not found");
-    }
-    if (!webinar) {
-      return res.status(404).send("Details not found for the webinar.");
-    }
-    if(mentor.isPremium === false){
-      return res.status(400).send("Subscribe to any of our plans to create a webinar.")
-    }
-    //add webinar limits as per mentor subscription
-    console.log("1");
-    // Parse the UTC date strings to Date objects
+    if (!webinar) return res.status(404).send("Details not found for the webinar.");
+
+    console.log("Fetching mentor and user");
+    const [mentor, user] = await Promise.all([
+      Mentor.findOne({ email: mail }),
+      User.findOne({ email: mail })
+    ]);
+
+    if (!mentor) return res.status(404).send("Mentor not found");
+    if (!user) return res.status(404).send("User not found");
+    if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
+
+    console.log("Processing dates");
     const startTimeUTC = new Date(webinar.startTime);
     const endTimeUTC = new Date(webinar.endTime);
+    webinar.startTime = startTimeUTC;
+    webinar.endTime = endTimeUTC;
 
-    // Calculate the IST offset in milliseconds (5 hours and 30 minutes)
-    const istOffset = 5 * 60 * 60 * 1000 + 30 * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    let finalWebinar;
 
-    // Add the IST offset to the UTC date objects
-    const startTimeIST = new Date(startTimeUTC.getTime() + istOffset);
-    const endTimeIST = new Date(endTimeUTC.getTime() + istOffset);
+    try {
+      console.log("Formatting date and processing image");
+      const formattedDate = formatWebinarDate(startTimeUTC);
+      const imageBuffer = await processWebinarImage(webinar.title, user.name, formattedDate);
 
-    // Convert to ISO strings if necessary (for example, to store in a database)
-    webinar.startTime = startTimeIST.toISOString();
-    webinar.endTime = endTimeIST.toISOString();
-    console.log("2");
+      finalWebinar =  await uploadWebinarImage(imageBuffer, webinar);
 
+    } catch (err) {
+      console.error("Error processing webinar image:", err);
+      return res.status(500).send("Error processing webinar image");
+    }
+
+    console.log("Creating new webinar");
+    console.log(finalWebinar)
     const newWebinar = new Webinar({
-      ...webinar,
-      creator: {
-        id: user._id,
-        name: user.name,
-        photo: mentor.profilePhoto.url,
-      },
+      ...finalWebinar,
+      liveLink: "/",
+      creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
+      participants: [user._id]
     });
-    user.myWebinars.unshift(newWebinar._id);
 
     await newWebinar.save();
+    user.myWebinars.unshift(newWebinar._id);
     await user.save();
 
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: SCOPES,
-      state: JSON.stringify({ webinarId: newWebinar._id }),
-    });
-    console.log(authUrl)
+    const authUrl = generateAuthUrl(newWebinar._id);
+    console.log("Webinar created successfully");
     res.status(200).send(authUrl);
-
-    
   } catch (error) {
-    return res.status(500).send(error);
+    console.error("Error creating webinar:", error);
+    return res.status(500).send(error.message);
   }
 });
+
+async function processWebinarImage(title, userName, formattedDate) {
+  try {
+    console.log("Reading image");
+    const image = await Jimp.read(IMAGE_PATH);
+    const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+    const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+
+    console.log("Printing text on image");
+    image.print(sm, 30, 20, "Surely Work | Webinar")
+         .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
+         .print(sm, 30, 400, formattedDate)
+         .print(sm, 400, 400, userName);
+
+    console.log("Getting image buffer");
+    return await image.getBufferAsync(Jimp.MIME_JPEG);
+  } catch (error) {
+    console.error("Error processing webinar image:", error);
+    throw new Error("Error processing webinar image");
+  }
+}
+
+async function uploadWebinarImage(imageBuffer, webinar) {
+  return new Promise((resolve, reject) => {
+    console.log("Uploading image to Cloudinary");
+    const uploadStream = cloud.uploader.upload_stream(
+      { folder: "LearnDuke", width: 150, crop: "scale" },
+      (error, result) => {
+        if (error) {
+          console.error("Error uploading webinar photo:", error);
+          reject(new Error("Error uploading webinar photo:", error));
+        } else {
+          console.log("Image uploaded to Cloudinary successfully");
+          webinar.photo = {
+            public_id: result.public_id,
+            url: result.secure_url
+          }; 
+          resolve(webinar);
+        }
+      }
+    );
+    streamifier.createReadStream(imageBuffer).pipe(uploadStream);
+  });
+}
+
+function formatWebinarDate(date) {
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+}
+
+function generateAuthUrl(webinarId) {
+  return oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: SCOPES,
+    state: JSON.stringify({ webinarId }),
+  });
+}
 
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
@@ -1291,7 +1346,7 @@ app.delete("/delete-webinar", async (req, res) => {
 
     await Webinar.findByIdAndDelete(id);
 
-    user.webinars = user.webinars.filter((web) => web.id === id);
+    user.myWebinars = user.myWebinars.filter((web) => web.id !== id);
 
     await user.save();
 
@@ -1300,155 +1355,258 @@ app.delete("/delete-webinar", async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 });
+app.get("/live-webinars", async (req, res) => {
+  const { page = 1, limit = 1 } = req.query;
 
-//get live webinars 
-app.get("/live-webinars", async (req,res) => {
   try {
-    const webinars = await Webinar.find({ status: "Live" });
-    return res.status(200).send(webinars);
+    const webinars = await Webinar.find({ status: "Live" })
+
+      .limit(limit * 1) // Convert limit to a number
+
+      .skip((page - 1) * limit) // Calculate the offset
+
+      .exec();
+
+    const count = await Webinar.countDocuments({ status: "Live" });
+
+    res.status(200).json({
+      webinars,
+
+      totalPages: Math.ceil(count / limit),
+
+      currentPage: page,
+    });
   } catch (error) {
-    return res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error");
   }
-})
+});
 
-//get upcoming webinars
 app.get("/upcoming-webinars", async (req, res) => {
+  const { page = 1, limit = 1 } = req.query;
+
   try {
-    const webinars = await Webinar.find({ status: "Upcoming" });
-    return res.status(200).send(webinars);
+    const webinars = await Webinar.find({ status: "Upcoming" })
+
+      .limit(limit * 1) // Convert limit to a number
+
+      .skip((page - 1) * limit) // Calculate the offset
+
+      .exec();
+
+    const count = await Webinar.countDocuments({ status: "Upcoming" });
+
+    res.status(200).json({
+      webinars,
+
+      totalPages: Math.ceil(count / limit),
+
+      currentPage: page,
+    });
   } catch (error) {
-    return res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error");
   }
 });
 
 //get past webinars
+
 app.get("/past-webinars", async (req, res) => {
+  const { page = 1, limit = 1 } = req.query;
+
   try {
-    const webinars = await Webinar.find({ status: "Past" });
-    return res.status(200).send(webinars);
+    const webinars = await Webinar.find({ status: "Past" })
+
+      .limit(limit * 1) // Convert limit to a number
+
+      .skip((page - 1) * limit) // Calculate the offset
+
+      .exec();
+
+    const count = await Webinar.countDocuments({ status: "Past" });
+
+    res.status(200).json({
+      webinars,
+
+      totalPages: Math.ceil(count / limit),
+
+      currentPage: page,
+    });
   } catch (error) {
-    return res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error");
   }
 });
 
 // get my webinars
-app.get("/get-my-webinars/:id", async(req,res) => {
-   try {
-    const {id} = req.params;
-    const user = await User.findOne({email: id});
-    if(!user){
-      return res.status(404).send("User not found");
-    }
-    const webinars = [];
-    
-    user.myWebinars.forEach(async(obj)=> {
-      const webinar = await Webinar.findById({_id: obj.id});
-      webinars.push(webinar);
-    })
-
-    return res.status(200).send(webinars);
-   } catch (error) {
-    return res.status(500).send("Internal server error")
-   }
-})
-
-//get registered webinars 
-app.get("/my-registered-webinars", async(req,res)=>{
+app.get("/get-my-webinars/:id", async (req, res) => {
   try {
-    const {id} = req.params;
-    const user = await User.findOne({email: id});
-    if(!user){
+    const { id } = req.params;
+    const user = await User.findOne({ email: id });
+    if (!user) {
       return res.status(404).send("User not found");
     }
     const webinars = [];
-    
-    user.joinedWebinars.forEach(async(obj)=> {
-      const webinar = await Webinar.findById({_id: obj.id});
+
+    user.myWebinars.forEach(async (obj) => {
+      const webinar = await Webinar.findById({ _id: obj.id });
       webinars.push(webinar);
-    })
+    });
 
     return res.status(200).send(webinars);
-   } catch (error) {
-    return res.status(500).send("Internal server error")
-   }
-})
+  } catch (error) {
+    return res.status(500).send("Internal server error");
+  }
+});
+
+//get registered webinars
+app.get("/my-registered-webinars", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findOne({ email: id });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    const webinars = [];
+
+    user.joinedWebinars.forEach(async (obj) => {
+      const webinar = await Webinar.findById({ _id: obj.id });
+      webinars.push(webinar);
+    });
+
+    return res.status(200).send(webinars);
+  } catch (error) {
+    return res.status(500).send("Internal server error");
+  }
+});
+
+app.get("/getWhatsappNumber/:id", async (req, res) => {
+  try {
+    const mentor = await Mentor.findById(req.params.id);
+    if (!mentor) {
+      return res.status(404).send("Mentor not found");
+    }
+    res.status(200).send(mentor.whatsappNumber);
+  } catch (err) {
+    res.send(err);
+  }
+});
 
 //register for a webinar
-app.post("/register-for-webinar", async(req,res) => {
+app.post("/register-for-webinar", async (req, res) => {
   try {
-    const {webinarId, mail} = req.body;
-    const user = await User.findOne({email: mail});
-    if(!user){
+    const { webinarId, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
       return res.status(404).send("User not found");
     }
-    const webinar = await Webinar.findOne({_id: webinarId});
-    if(webinar.creator.id === user._id){
-      return res.status(302).send("You are the creator of webinar.")
+    const webinar = await Webinar.findOne({ _id: webinarId });
+    if (webinar.creator.id === user._id) {
+      return res.status(302).send("You are the creator of webinar.");
     }
-    if(!webinar){
+    if (!webinar) {
       return res.status(404).send("Webinar not found");
     }
-    if(webinar.status === "Past"){
+    if (webinar.status === "Past") {
       return res.status(400).send("Webinar has ended");
     }
-    if(webinar.participants.includes(user._id)){
+    if (webinar.participants.includes(user._id)) {
       return res.status(400).send("User has already joined the webinar");
     }
-    webinar.participants.push(user._id);
 
+    webinar.participants.push(user._id);
     await webinar.save();
     return res.status(200).send("User joined the webinar successfully");
-  }catch(error){
-    return res.status(500).send("Internal server error")
+  } catch (error) {
+    return res.status(500).send("Internal server error");
   }
-})
+});
+app.post("/unregister-for-webinar", async (req, res) => {
+  try {
+    const { webinarId, mail } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    const webinar = await Webinar.findOne({ _id: webinarId });
+    if (webinar.creator.id === user._id) {
+      return res.status(302).send("You are the creator of webinar.");
+    }
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+    if (webinar.status === "Past") {
+      return res.status(400).send("Webinar has ended");
+    }
+    if (!webinar.participants.includes(user._id)) {
+      return res
+        .status(400)
+        .send("User has already unregistered for the webinar");
+    }
+    await Webinar.updateOne(
+      { _id: webinarId },
+      { $pull: { participants: user._id } }
+    );
+
+    await webinar.save();
+    return res
+      .status(200)
+      .send("User unregistered from the webinar successfully");
+  } catch (error) {
+    return res.status(500).send("Internal server error");
+  }
+});
 
 // is eligible to join webinar
-app.post("/isEligible", async(req,res)=> {
+app.post("/isEligible", async (req, res) => {
   try {
-    const {mail, webinarId} = req.body;
-    const user = await User.findOne({ email: mail})
-    if(!user){
-      return res.status(404).send("User not found")
+    const { mail, webinarId } = req.body;
+    const user = await User.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
-    const webinar = await Webinar.findById({_id: webinarId});
-    if(!webinar){
-      return res.status(404).send("Webinar not found")
+    const webinar = await Webinar.findById({ _id: webinarId });
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
     }
-    const isRegistered = await webinar.participants.includes(user._id.toString());
+    const isRegistered = await webinar.participants.includes(
+      user._id.toString()
+    );
     const isCreator = webinar.creator.id.toString() === user._id.toString();
 
-    if(isRegistered || isCreator){
-      return res.status(200).send(true)
-    }      
-    return res.status(201).send(false)
+    if (isRegistered || isCreator) {
+      return res.status(200).send(true);
+    }
+    return res.status(201).send(false);
   } catch (error) {
-    return res.status(500).send("Internal server error")
+    return res.status(500).send("Internal server error");
   }
-})
+});
 
 // updating the status of the webinar
 const updateWebinarStatus = async () => {
-  const time = new Date();
-  const istTime = new Date(time.getTime() + 5.5 * 60 * 60 * 1000);
-  const webinars = await Webinar.find();
-  webinars.forEach(async (webinar) => {
-    if(webinar.status === "Past"){
-      return;
-    }
-    if (
-      istTime> webinar.startTime.getTime() &&
-      istTime< webinar.endTime.getTime() && webinar.status !== "Live"
-    ) {
-      webinar.status = "Live";
-      await webinar.save();
-    }
-    if (istTime> webinar.endTime.getTime()) {
-      webinar.status = "Past";
-      webinar.liveLink = "past";
-      await webinar.save();
-    }
-  });
+  try {
+    const webinars = await Webinar.find();
+    webinars.forEach(async (webinar) => {
+      if (webinar.status == "Past") {
+        return;
+      }
+      let now = new Date().getTime() / 1000;
+      let start = new Date(webinar.startTime).getTime() / 1000;
+      let end = new Date(webinar.endTime).getTime() / 1000;
+
+      if (webinar.status == "Upcoming" && start <= now) {
+        webinar.status = "Live";
+        await webinar.save();
+        return;
+      }
+      if (webinar.status == "Live" && now > end) {
+        console.log(now > end);
+        webinar.status = "Past";
+        await webinar.save();
+        return;
+      }
+    });
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 cron.schedule("* * * * *", () => {
@@ -1464,7 +1622,7 @@ app.get("/getWebinar/:id", async (req, res) => {
     }
 
     console.log(`Webinar Creator ID: ${webinar.creator.id.toString()}`);
-    
+
     // Assuming Mentor model uses ObjectId type for id
     const mentor = await Mentor.findOne({ _id: webinar.creator.id });
     if (!mentor) {
@@ -1478,7 +1636,155 @@ app.get("/getWebinar/:id", async (req, res) => {
   }
 });
 
+app.get("/pay/webinar", async (req, res) => {
+  try {
+    const { webinarId, mail } = req.query;
 
+    const webinar = await Webinar.findById(webinarId);
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+
+    const user = await User.findOne({ email: mail });
+    const mentor = await Mentor.findOne({ email: mail });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    if (mentor && webinar.creator.id == mentor._id) {
+      return res.status(201).send("You are the creator of this webinar");
+    }
+
+    if (webinar.status === "Past") {
+      return res.status(201).send("Webinar already ended");
+    }
+    if (webinar.isPaid == false || (webinar.price && webinar.price <= 0)) {
+      return res.status(200).send("This webinar is free");
+    }
+
+    const endPoint = "/pg/v1/pay";
+    const merchantTransactionId = uniqid();
+    const userId = "1234";
+
+    const payload = {
+      merchantId: process.env.PHONE_PE_MERCHANT_ID,
+      merchantTransactionId: merchantTransactionId,
+      merchantUserId: userId,
+      amount: parseInt(webinar.price) * 100, // in paise
+      redirectUrl: `https://learndukeserver-test.vercel.app/redirect-url/${merchantTransactionId}/${webinar._id}/${user._id}`,
+      redirectMode: "REDIRECT",
+      mobileNumber: "1111111111", // to be clarified.
+      paymentInstrument: {
+        type: "PAY_PAGE",
+      },
+    };
+
+    const bufferObj = Buffer.from(JSON.stringify(payload), "utf8");
+    const base64EncodedPayload = bufferObj.toString("base64");
+
+    const xVerify =
+      sha256(base64EncodedPayload + endPoint + process.env.PHONE_PE_SALT_KEY) +
+      "###" +
+      process.env.PHONE_PE_SALT_INDEX;
+
+    const options = {
+      method: "post",
+      url: `${process.env.PHONE_PE_HOST_URL}${endPoint}`,
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        "X-VERIFY": xVerify,
+      },
+      data: {
+        request: base64EncodedPayload,
+      },
+    };
+
+    const response = await axios.request(options);
+    res.redirect(response.data.data.instrumentResponse.redirectInfo.url);
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .redirect(`${process.env.FRONTEND_URLTEST}/paymentfailed`);
+  }
+});
+
+
+app.get(
+  "/redirect-url/:merchantTransactionId/:webinarId/:userId",
+  async (req, res) => {
+    try {
+      const { merchantTransactionId, webinarId, userId } = req.params;
+
+      const user = await User.findById(userId);
+      const webinar = await Webinar.findById(webinarId);
+
+      if (merchantTransactionId) {
+        const xVerify =
+          sha256(
+            `/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}${process.env.PHONE_PE_SALT_KEY}`
+          ) +
+          "###" +
+          process.env.PHONE_PE_SALT_INDEX;
+
+        const options = {
+          method: "get",
+          url: `${process.env.PHONE_PE_HOST_URL}/pg/v1/status/${process.env.PHONE_PE_MERCHANT_ID}/${merchantTransactionId}`,
+          headers: {
+            accept: "application/json",
+            "Content-Type": "application/json",
+            "X-MERCHANT-ID": merchantTransactionId,
+            "X-VERIFY": xVerify,
+          },
+        };
+
+        const response = await axios.request(options);
+        const paymentDate = new Date();
+
+        const paymentDetails = {
+          paymentDate: paymentDate,
+          plan: `Webinar - ${webinar.title}`,
+          amount: parseInt(response.data?.data.amount) / 100,
+          status: response.data?.code,
+          user: user.email,
+          transactionId: response.data?.data.transactionId,
+          merchantTransactionId: merchantTransactionId,
+          expirationDate: paymentDate,
+          paymentMethod: response.data?.data?.paymentInstrument.type,
+          pgTransactionId:
+            response.data?.data?.paymentInstrument.pgTransactionId,
+          arn: response.data?.data.paymentInstrument.arn,
+        };
+
+        const payment = new Payment(paymentDetails);
+        await payment.save();
+
+        if (response.data.code === "PAYMENT_SUCCESS") {
+          webinar.participants.unshift(user._id);
+          await user.save();
+          await webinar.save();
+          res.redirect(`${process.env.FRONTEND_URLTEST}/detailedWebinar/${webinarId}`);
+        } else if (response.data.code === "PAYMENT_ERROR") {
+          return res.redirect(
+            `${process.env.FRONTEND_URLTEST}/paymentfailed`
+          );
+        }
+      } else {
+        return res.redirect(
+          `${process.env.FRONTEND_URLTEST}/paymentfailed`
+        );
+      }
+    } catch (error) {
+      console.log(error);
+      if (!res.headersSent) {
+        return res.redirect(
+          `${process.env.FRONTEND_URLTEST}/paymentfailed`
+        );
+      }
+    }
+  }
+);
 /* -------------------------------------------------------------------------- */
 
 app.get("/", (req, res) => {
