@@ -1281,7 +1281,7 @@ const IMAGE_PATH = path.join(__dirname, 'public', 'webinar.jpg');
 async function processWebinarImage(title, userName, formattedDate) {
   try {
     console.log("Reading image");
-    const imagePath = await fs.readFileSync(IMAGE_PATH);
+    const imagePath = await fs.promises.readFile(IMAGE_PATH);
     const image = await Jimp.read(imagePath);
     const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
     const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
@@ -1295,9 +1295,18 @@ async function processWebinarImage(title, userName, formattedDate) {
 
     console.log("Getting image buffer");
     return await image.getBufferAsync(Jimp.MIME_JPEG);
-  } catch (error) {
-    console.error("Error processing webinar image:", error);
-    throw new Error("Error processing webinar image");
+  }
+  catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error("Image file not found:", error);
+      return;
+    } else if (error instanceof Jimp.Error) {
+      throw new Error("Jimp error processing image:", error);
+      return;
+    } else {
+      throw new Error0("Unexpected error processing webinar image:", error);
+      return;
+    }
   }
 }
 
