@@ -1308,26 +1308,32 @@ async function processWebinarImage(title, userName, formattedDate) {
 }
 
 async function uploadWebinarImage(imageBuffer, webinar) {
-  return new Promise((resolve, reject) => {
-    console.log("Uploading image to Cloudinary");
-    const uploadStream = cloud.uploader.upload_stream(
-      { folder: "LearnDuke", width: 854, height: 480, crop: "fit", quality: "auto"},
-      (error, result) => {
-        if (error) {
-          console.error("Error uploading webinar photo:", error);
-          reject(new Error("Error uploading webinar photo:", error));
-        } else {
-          console.log("Image uploaded to Cloudinary successfully");
-          webinar.photo = {
-            public_id: result.public_id,
-            url: result.secure_url
-          }; 
-          resolve(webinar);
+  try {
+    const result = await new Promise((resolve, reject) => {
+      console.log("Uploading image to Cloudinary");
+      const uploadStream = cloud.uploader.upload_stream(
+        { folder: "LearnDuke", width: 854, height: 480, crop: "fit", quality: "auto"},
+        (error, result) => {
+          if (error) {
+            console.error("Error uploading webinar photo:", error);
+            reject(new Error("Error uploading webinar photo:", error));
+          } else {
+            console.log("Image uploaded to Cloudinary successfully");
+            webinar.photo = {
+              public_id: result.public_id,
+              url: result.secure_url
+            }; 
+            resolve(webinar);
+          }
         }
-      }
-    );
-    streamifier.createReadStream(imageBuffer).pipe(uploadStream);
-  });
+      );
+      streamifier.createReadStream(imageBuffer).pipe(uploadStream);
+    });
+    return result;
+  } catch (error) {
+    console.error("Error uploading webinar photo:", error);
+    throw new Error("Error uploading webinar photo:", error);
+  }
 }
 
 function formatWebinarDate(date) {
