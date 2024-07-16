@@ -1292,7 +1292,7 @@ async function processWebinarImage(title, userName, formattedDate) {
         //  .write("./webinar-edited.jpg")
 
     console.log("Getting image buffer");
-    return await image.quality(100).getBufferAsync(Jimp.MIME_JPEG);
+    return await image.getBufferAsync(Jimp.MIME_JPEG);
   } catch (error) {
     console.error("Error processing webinar image:", error);
     throw new Error("Error processing webinar image");
@@ -1303,7 +1303,7 @@ async function uploadWebinarImage(imageBuffer, webinar) {
   return new Promise((resolve, reject) => {
     console.log("Uploading image to Cloudinary");
     const uploadStream = cloud.uploader.upload_stream(
-      { folder: "LearnDuke", width: 150, crop: "scale" },
+      { folder: "LearnDuke", width: 854, height: 480, crop: "fit", quality: "auto"},
       (error, result) => {
         if (error) {
           console.error("Error uploading webinar photo:", error);
