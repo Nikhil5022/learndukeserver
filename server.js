@@ -1217,8 +1217,6 @@ app.get("/create-meet-event", async (req, res) => {
   }
 });
 
-const IMAGE_PATH =  path.join(process.cwd(), 'webinar.jpg');
-
 app.post("/create-webinar", async (req, res) => {
   try {
     console.log("Starting create-webinar endpoint");
@@ -1277,6 +1275,8 @@ app.post("/create-webinar", async (req, res) => {
     return res.status(500).send(error.message);
   }
 });
+
+const IMAGE_PATH = path.join(__dirname, 'public', 'webinar.jpg');
 
 async function processWebinarImage(title, userName, formattedDate) {
   try {
