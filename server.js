@@ -1299,13 +1299,10 @@ async function processWebinarImage(title, userName, formattedDate) {
   catch (error) {
     if (error.code === 'ENOENT') {
       throw new Error("Image file not found:", error);
-      return;
     } else if (error instanceof Jimp.Error) {
       throw new Error("Jimp error processing image:", error);
-      return;
     } else {
-      throw new Error0("Unexpected error processing webinar image:", error);
-      return;
+      throw new Error("Unexpected error processing webinar image:", error);
     }
   }
 }
