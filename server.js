@@ -32,6 +32,7 @@ const uniqid = require("uniqid");
 const sha256 = require("sha256");
 const streamifier = require('streamifier');
 const Jimp = require("jimp");
+const fs = require("fs")
 
 app.use(cors("*"));
 
@@ -1280,7 +1281,8 @@ app.post("/create-webinar", async (req, res) => {
 async function processWebinarImage(title, userName, formattedDate) {
   try {
     console.log("Reading image");
-    const image = await Jimp.read(IMAGE_PATH);
+    const imagePath = await fs.readFileSync(IMAGE_PATH);
+    const image = await Jimp.read(imagePath);
     const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
     const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
 
