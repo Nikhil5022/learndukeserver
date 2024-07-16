@@ -1609,10 +1609,10 @@ const updateWebinarStatus = async () => {
   }
 };
 
-cron.schedule("* * * * *", () => {
-  console.log("Checking for webinars to update their status...");
-  updateWebinarStatus();
-});
+// cron.schedule("* * * * *", () => {
+//   console.log("Checking for webinars to update their status...");
+//   updateWebinarStatus();
+// });
 
 app.get("/getWebinar/:id", async (req, res) => {
   try {
