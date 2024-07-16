@@ -49,6 +49,7 @@ app.use(
 app.use(express.json());
 app.use(fileUpload());
 const { google } = require("googleapis");
+const path = require("path");
 
 // Connect to MongoDB Atlas
 mongoose
@@ -1215,7 +1216,7 @@ app.get("/create-meet-event", async (req, res) => {
   }
 });
 
-const IMAGE_PATH = "./webinar.jpg"
+const IMAGE_PATH =  path.join(process.cwd(), 'webinar.jpg');
 
 app.post("/create-webinar", async (req, res) => {
   try {
@@ -1287,10 +1288,11 @@ async function processWebinarImage(title, userName, formattedDate) {
     image.print(sm, 30, 20, "Surely Work | Webinar")
          .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
          .print(sm, 30, 400, formattedDate)
-         .print(sm, 400, 400, userName);
+         .print(sm, 400, 400, userName)
+        //  .write("./webinar-edited.jpg")
 
     console.log("Getting image buffer");
-    return await image.getBufferAsync(Jimp.MIME_JPEG);
+    return await image.quality(100).getBufferAsync(Jimp.MIME_JPEG);
   } catch (error) {
     console.error("Error processing webinar image:", error);
     throw new Error("Error processing webinar image");
