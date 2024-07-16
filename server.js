@@ -1251,7 +1251,7 @@ app.post("/create-webinar", async (req, res) => {
 
     } catch (err) {
       console.error("Error processing webinar image:", err);
-      return res.status(500).send("Error processing webinar image");
+      return res.status(500).send("Error processing webinar image"+err );
     }
 
     console.log("Creating new webinar");
