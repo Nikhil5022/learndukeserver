@@ -1196,7 +1196,8 @@ app.get("/create-meet-event", async (req, res) => {
       return res.status(404).send("Webinar not found");
     }
     const event = await createMeetEvent(oauth2Client, webinar);
-    console.log(event);
+    webinar.liveLink = event.hangoutLink;
+    await webinar.save()
     res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
     res.status(500).send("Error creating event");
@@ -1221,8 +1222,12 @@ app.post("/create-webinar", async (req, res) => {
     if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
 
     console.log("Processing dates");
-    webinar.startTime = new Date(webinar.startTime);
-    webinar.endTime = new Date(webinar.endTime);
+
+    const startTime = new Date(webinar.startTime);
+    const endTime = new Date(webinar.endTime);
+
+    webinar.startTime = new Date(startTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
+    webinar.endTime = new Date(endTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
     //  = startTimeUTC;
     // = endTimeUTC;
     // try {
