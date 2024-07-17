@@ -22,7 +22,6 @@
     "express-fileupload": "^1.5.0",
     "express-session": "^1.18.0",
     "googleapis": "^140.0.1",
-    "jimp": "^0.22.12",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.3.5",
     "node-cron": "^3.0.3",
@@ -31,7 +30,6 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "sha256": "^0.2.0",
-    "streamifier": "^0.1.1",
     "uniqid": "^5.4.0"
   },
   "devDependencies": {

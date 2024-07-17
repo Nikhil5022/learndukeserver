@@ -19,10 +19,8 @@ const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
 // const router = require("./routes/paymentRoutes");
 const cloudinary = require("cloudinary");
-const { v2: cloud } = require("cloudinary");
 const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
-const crypto = require("crypto");
 const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
@@ -30,8 +28,6 @@ const app = express();
 const axios = require("axios");
 const uniqid = require("uniqid");
 const sha256 = require("sha256");
-const streamifier = require('streamifier');
-const Jimp = require("jimp");
 
 app.use(cors("*"));
 
@@ -49,6 +45,7 @@ app.use(
 app.use(express.json());
 app.use(fileUpload());
 const { google } = require("googleapis");
+const path = require("path");
 
 // Connect to MongoDB Atlas
 mongoose
@@ -1182,15 +1179,6 @@ async function createMeetEvent(auth, webinar) {
   }
 }
 
-// app.get('/auth', (req, res) => {
-//   const authUrl = oauth2Client.generateAuthUrl({
-//     access_type: 'offline',
-//     scope: SCOPES,
-//   });
-//   console.log(authUrl)
-//   res.redirect(authUrl);
-// });
-
 app.get("/oauth2callback", async (req, res) => {
   const { code, state } = req.query;
   const { tokens } = await oauth2Client.getToken(code);
@@ -1215,13 +1203,11 @@ app.get("/create-meet-event", async (req, res) => {
   }
 });
 
-const IMAGE_PATH = "./webinar.jpg"
-
 app.post("/create-webinar", async (req, res) => {
   try {
     console.log("Starting create-webinar endpoint");
 
-    const { mail, webinar } = req.body;
+    const { mail, webinar, image} = req.body;
     if (!webinar) return res.status(404).send("Details not found for the webinar.");
 
     console.log("Fetching mentor and user");
@@ -1235,29 +1221,41 @@ app.post("/create-webinar", async (req, res) => {
     if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
 
     console.log("Processing dates");
-    const startTimeUTC = new Date(webinar.startTime);
-    const endTimeUTC = new Date(webinar.endTime);
-    webinar.startTime = startTimeUTC;
-    webinar.endTime = endTimeUTC;
+    webinar.startTime = new Date(webinar.startTime);
+    webinar.endTime = new Date(webinar.endTime);
+    //  = startTimeUTC;
+    // = endTimeUTC;
+    // try {
+    //   // console.log("Formatting date and processing image");
+    //   // const formattedDate = await formatWebinarDate(startTimeUTC);
+    //   // const imageBuffer = await processWebinarImage(webinar.title, user.name, formattedDate);
+    //   // finalWebinar =  await uploadWebinarImage(imageBuffer, webinar);
 
-    let finalWebinar;
+
+    // } catch (err) {
+    //   console.error("Error processing webinar image:", err);
+    //   return res.status(500).send("Error processing webinar image" +  err);
+    // }
 
     try {
-      console.log("Formatting date and processing image");
-      const formattedDate = formatWebinarDate(startTimeUTC);
-      const imageBuffer = await processWebinarImage(webinar.title, user.name, formattedDate);
+      const newPic = await cloudinary.uploader.upload(image, {
+        folder: "LearnDuke",
+        width: 150,
+        crop: "scale",
+        timeout: 60000,
+      });
 
-      finalWebinar =  await uploadWebinarImage(imageBuffer, webinar);
-
-    } catch (err) {
-      console.error("Error processing webinar image:", err);
-      return res.status(500).send("Error processing webinar image");
+      webinar.photo = {
+        public_id: newPic.public_id,
+        url: newPic.secure_url,
+      };
+    } catch (uploadError) {
+      console.error("Error uploading new profile photo:", uploadError);
+      return res.status(500).send("Error uploading profile photo");
     }
 
-    console.log("Creating new webinar");
-    console.log(finalWebinar)
     const newWebinar = new Webinar({
-      ...finalWebinar,
+      ...webinar,
       liveLink: "/",
       creator: { id: mentor._id, name: user.name, photo: mentor.profilePhoto.url },
       participants: [user._id]
@@ -1276,53 +1274,69 @@ app.post("/create-webinar", async (req, res) => {
   }
 });
 
-async function processWebinarImage(title, userName, formattedDate) {
-  try {
-    console.log("Reading image");
-    const image = await Jimp.read(IMAGE_PATH);
-    const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-    const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+// const IMAGE_PATH = path.join(__dirname, 'public', 'webinar.jpg');
 
-    console.log("Printing text on image");
-    image.print(sm, 30, 20, "Surely Work | Webinar")
-         .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
-         .print(sm, 30, 400, formattedDate)
-         .print(sm, 400, 400, userName);
+// async function processWebinarImage(title, userName, formattedDate) {
+//   try {
+//     console.log("Reading image");
+//     const imagePath = await fs.promises.readFile(IMAGE_PATH);
+//     const image = await Jimp.read(imagePath);
+//     const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+//     const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
 
-    console.log("Getting image buffer");
-    return await image.getBufferAsync(Jimp.MIME_JPEG);
-  } catch (error) {
-    console.error("Error processing webinar image:", error);
-    throw new Error("Error processing webinar image");
-  }
-}
+//     console.log("Printing text on image");
+//     image.print(sm, 30, 20, "Surely Work | Webinar")
+//          .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
+//          .print(sm, 30, 400, formattedDate)
+//          .print(sm, 400, 400, userName)
+//         //  .write("./webinar-edited.jpg")
 
-async function uploadWebinarImage(imageBuffer, webinar) {
-  return new Promise((resolve, reject) => {
-    console.log("Uploading image to Cloudinary");
-    const uploadStream = cloud.uploader.upload_stream(
-      { folder: "LearnDuke", width: 150, crop: "scale" },
-      (error, result) => {
-        if (error) {
-          console.error("Error uploading webinar photo:", error);
-          reject(new Error("Error uploading webinar photo:", error));
-        } else {
-          console.log("Image uploaded to Cloudinary successfully");
-          webinar.photo = {
-            public_id: result.public_id,
-            url: result.secure_url
-          }; 
-          resolve(webinar);
-        }
-      }
-    );
-    streamifier.createReadStream(imageBuffer).pipe(uploadStream);
-  });
-}
+//     console.log("Getting image buffer");
+//     return await image.getBufferAsync(Jimp.MIME_JPEG);
+//   }
+//   catch (error) {
+//     if (error.code === 'ENOENT') {
+//       throw new Error("Image file not found:", error);
+//     } else if (error instanceof Jimp.Error) {
+//       throw new Error("Jimp error processing image:", error);
+//     } else {
+//       throw new Error("Unexpected error processing webinar image:", error);
+//     }
+//   }
+// }
 
-function formatWebinarDate(date) {
-  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-}
+// async function uploadWebinarImage(imageBuffer, webinar) {
+//   try {
+//     const result = await new Promise((resolve, reject) => {
+//       console.log("Uploading image to Cloudinary");
+//       const uploadStream = cloud.uploader.upload_stream(
+//         { folder: "LearnDuke", width: 854, height: 480, crop: "fit", quality: "auto"},
+//         (error, result) => {
+//           if (error) {
+//             console.error("Error uploading webinar photo:", error);
+//             reject(new Error("Error uploading webinar photo:", error));
+//           } else {
+//             console.log("Image uploaded to Cloudinary successfully");
+//             webinar.photo = {
+//               public_id: result.public_id,
+//               url: result.secure_url
+//             }; 
+//             resolve(webinar);
+//           }
+//         }
+//       );
+//       streamifier.createReadStream(imageBuffer).pipe(uploadStream);
+//     });
+//     return result;
+//   } catch (error) {
+//     console.error("Error uploading webinar photo:", error);
+//     throw new Error("Error uploading webinar photo:", error);
+//   }
+// }
+
+// function formatWebinarDate(date) {
+//   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+// }
 
 function generateAuthUrl(webinarId) {
   return oauth2Client.generateAuthUrl({
@@ -1598,7 +1612,6 @@ const updateWebinarStatus = async () => {
         return;
       }
       if (webinar.status == "Live" && now > end) {
-        console.log(now > end);
         webinar.status = "Past";
         await webinar.save();
         return;
