@@ -82,7 +82,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://learndukeserver.vercel.app/auth/google/callback",
+      callbackURL: "https://learndukeserver-test.vercel.app/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -1092,7 +1092,7 @@ app.get("/pay/:name/:mail/:isMentor", async (req, res) => {
     merchantTransactionId: merchantTransactionId,
     merchantUserId: userId,
     amount: parseInt(plan.price) * 100, // in paise
-    redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
+    redirectUrl: `https://learndukeserver-test.vercel.app/redirect-url/${merchantTransactionId}/${plan.name}/${plan.days}/${user.email}/${plan.isMentor}`,
     redirectMode: "REDIRECT",
     mobileNumber: "1111111111", // to be clarified.
     paymentInstrument: {
@@ -1711,7 +1711,7 @@ app.get("/pay/webinar", async (req, res) => {
       merchantTransactionId: merchantTransactionId,
       merchantUserId: userId,
       amount: parseInt(webinar.price) * 100, // in paise
-      redirectUrl: `https://learndukeserver.vercel.app/redirect-url/${merchantTransactionId}/${webinar._id}/${user._id}`,
+      redirectUrl: `https://learndukeserver-test.vercel.app/redirect-url/${merchantTransactionId}/${webinar._id}/${user._id}`,
       redirectMode: "REDIRECT",
       mobileNumber: "1111111111", // to be clarified.
       paymentInstrument: {
