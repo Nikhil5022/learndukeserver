@@ -1196,7 +1196,8 @@ app.get("/create-meet-event", async (req, res) => {
       return res.status(404).send("Webinar not found");
     }
     const event = await createMeetEvent(oauth2Client, webinar);
-    console.log(event);
+    webinar.liveLink = event.hangoutLink;
+    await webinar.save()
     res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
     res.status(500).send("Error creating event");
