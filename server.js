@@ -1649,6 +1649,28 @@ app.get("/getWebinar/:id", async (req, res) => {
   }
 });
 
+app.get("/getWebinarParticipants/:id", async (req, res) => {
+  try {
+    const webinar = await Webinar.findOne({ _id: req.params.id });
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+
+    const participants = [];
+    for (const participantId of webinar.participants) {
+      const user = await User.findOne({ _id: participantId });
+      if (user) {
+        participants.push(user);
+      }
+    }
+
+    res.send(participants);
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).send(error);
+  }
+});
+
 app.get("/pay/webinar", async (req, res) => {
   try {
     const { webinarId, mail } = req.query;
