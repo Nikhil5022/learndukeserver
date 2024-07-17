@@ -19,10 +19,8 @@ const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
 // const router = require("./routes/paymentRoutes");
 const cloudinary = require("cloudinary");
-const { v2: cloud } = require("cloudinary");
 const bodyParser = require("body-parser");
 const fileUpload = require("express-fileupload");
-const crypto = require("crypto");
 const cron = require("node-cron");
 // const OpenAIApi = require('openai');
 // Initialize cors
@@ -30,9 +28,6 @@ const app = express();
 const axios = require("axios");
 const uniqid = require("uniqid");
 const sha256 = require("sha256");
-const streamifier = require('streamifier');
-const Jimp = require("jimp");
-const fs = require("fs")
 
 app.use(cors("*"));
 
