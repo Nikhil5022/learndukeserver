@@ -1498,11 +1498,12 @@ app.post("/unregister-for-webinar", async (req, res) => {
   try {
     const { webinarId, mail } = req.body;
     const user = await User.findOne({ email: mail });
+    const mentor = await Mentor.findOne({email: mail});
     if (!user) {
       return res.status(404).send("User not found");
     }
     const webinar = await Webinar.findOne({ _id: webinarId });
-    if (webinar.creator.id === user._id) {
+    if (webinar.creator.id.toString() === mentor._id.toString()) {
       return res.status(302).send("You are the creator of webinar.");
     }
     if (!webinar) {
