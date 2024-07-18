@@ -75,7 +75,11 @@ const userSchema = new mongoose.Schema({
   joinedWebinars: [
     {
         type:String
-    }]
+    }],
+    webinarLimit : {
+      type: Number,
+      default: 0,
+    }
 });
 
 const jobSchema = new mongoose.Schema({
