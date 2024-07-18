@@ -906,7 +906,7 @@ app.get("/getMentor", async (req, res) => {
     const premiummentor = mentors.filter((mentor) => mentor.isPremium === true);
 
     const totalMentor = await Mentor.countDocuments(query);
-    const totalPages = Math.ceil(totalMentor/limit);
+    const totalPages = Math.ceil(totalMentor / limit);
 
     res.send({
       startIndex,
@@ -1208,7 +1208,7 @@ app.post("/create-webinar", async (req, res) => {
   try {
     console.log("Starting create-webinar endpoint");
 
-    const { mail, webinar, image} = req.body;
+    const { mail, webinar, image } = req.body;
     if (!webinar) return res.status(404).send("Details not found for the webinar.");
 
     console.log("Fetching mentor and user");
@@ -1354,26 +1354,65 @@ function generateAuthUrl(webinarId) {
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
   try {
-    const { id, mail } = req.body;
-    const user = await User.findOne({ email: mail });
+
+    const id = req.body.id;
+    const mail = req.body.mail;
+
+
+    const creator = await Mentor.findOne({ email: mail });
+
+    if (!creator) {
+      return res.status(404).send("Mentor not found");
+    }
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) {
+      return res.status(404).send("Webinar not found");
+    }
+
+    console.log(webinar.creator.id, creator._id);
+    const creatorid = webinar.creator.id.toString();
+    const mentorid = creator._id.toString();
+
+    if (creatorid !== mentorid) {
+      return res.status(403).send("You are not authorized to delete this webinar");
+    }
+
+    const user = await User.findOne({ email: creator.email });
     if (!user) {
       return res.status(404).send("User not found");
     }
-    if (!id) {
-      return res.status(404).send("Id not provided");
+
+    const index = user.myWebinars.indexOf(webinar._id);
+    if (index > -1) {
+      user.myWebinars.splice(index, 1);
     }
 
-    await Webinar.findByIdAndDelete(id);
-
-    user.myWebinars = user.myWebinars.filter((web) => web.id !== id);
+    for (let i = 0; i < webinar.participants.length; i++) {
+      const participant = await User.findById(webinar.participants[i]);
+      if (!participant) {
+        return res.status(404).send("Participant not found");
+      }
+      const index = participant.joinedWebinars.indexOf(webinar._id);
+      if (index > -1) {
+        participant.joinedWebinars.splice(index, 1);
+      }
+      await participant.save();
+    }
 
     await user.save();
+    await cloudinary.uploader.destroy(webinar.photo.public_id);
+    await Webinar.findByIdAndDelete(webinar._id);
 
-    return res.status(200).send("Webinar deleted Succesfully.");
+    return res.status(200).send("Webinar deleted successfully");
+
   } catch (error) {
-    return res.status(500).send("Internal Server Error");
+    console.error("Error deleting webinar:", error);
+    return res.status(500).send("Error deleting webinar");
   }
 });
+
+
 app.get("/live-webinars", async (req, res) => {
   const { page = 1, limit = 1 } = req.query;
 
@@ -1462,36 +1501,46 @@ app.get("/get-my-webinars/:id", async (req, res) => {
     if (!user) {
       return res.status(404).send("User not found");
     }
-    const webinars = [];
-
-    user.myWebinars.forEach(async (obj) => {
-      const webinar = await Webinar.findById({ _id: obj.id });
-      webinars.push(webinar);
-    });
-
+    // Use Promise.all to handle async operations within a loop
+    const webinars = await Promise.all(
+      user.myWebinars.map(async (obj) => {
+        return Webinar.findById({ _id: obj });
+      })
+    );
     return res.status(200).send(webinars);
   } catch (error) {
+    console.log(error);
     return res.status(500).send("Internal server error");
   }
 });
 
+
 //get registered webinars
-app.get("/my-registered-webinars", async (req, res) => {
+app.get("/my-registered-webinars/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(id)
     const user = await User.findOne({ email: id });
     if (!user) {
       return res.status(404).send("User not found");
     }
-    const webinars = [];
+    console.log("1")
 
-    user.joinedWebinars.forEach(async (obj) => {
-      const webinar = await Webinar.findById({ _id: obj.id });
-      webinars.push(webinar);
-    });
+    // user.joinedWebinars.forEach(async (obj) => {
+    //   const webinar = await Webinar.findById({ _id: obj.id });
+    //   webinars.push(webinar);
+    // });
+    console.log(user)
+    const webinars = await Promise.all(
+      user.joinedWebinars.map(async (obj) => {
+        return Webinar.findById({ _id: obj });
+      }
+      ));
+
 
     return res.status(200).send(webinars);
   } catch (error) {
+    console.log(error);
     return res.status(500).send("Internal server error");
   }
 });

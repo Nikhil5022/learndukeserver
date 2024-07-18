@@ -70,15 +70,11 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
   myWebinars: [{
-    id: {type: mongoose.Schema.Types.ObjectId,
-    ref: 'Webinar',
-    },
+    type:String
   }],
-  joinedWebinars:[
+  joinedWebinars: [
     {
-      id: {type: mongoose.Schema.Types.ObjectId,
-        ref : "Webinar",
-      }
+        type:String
     }]
 });
 
@@ -201,8 +197,8 @@ const paymentSchema = new mongoose.Schema({
   merchantTransactionId: {
     type: String,
   },
-  paymentMethod:{
-    type:String,
+  paymentMethod: {
+    type: String,
   },
   pgTransactionId: {
     type: String,
@@ -242,8 +238,8 @@ const paymentSchema = new mongoose.Schema({
   merchantTransactionId: {
     type: String,
   },
-  paymentMethod:{
-    type:String,
+  paymentMethod: {
+    type: String,
   },
   pgTransactionId: {
     type: String,
@@ -388,33 +384,33 @@ const webinarSchema = new mongoose.Schema({
     required: true,
   },
   photo: {
-    public_id:{
+    public_id: {
       type: String,
       required: true,
       default: '1234',
-    }, 
-    url:{
+    },
+    url: {
       type: String,
       required: true,
     }
   },
-  topics:[{
+  topics: [{
     name: {
       type: String,
-      
+
     },
     descriptions: {
       type: [String],
-    } 
+    }
   }],
-  additionalBenefits:[{
+  additionalBenefits: [{
     type: String,
   }],
   description: {
     type: String,
     required: true,
   },
-  domain:{
+  domain: {
     type: String,
     required: true,
   },
@@ -422,12 +418,12 @@ const webinarSchema = new mongoose.Schema({
     id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,   
+      required: true,
     },
     name: {
       type: String,
       required: true,
-    }, 
+    },
     photo: {
       type: String,
       required: true,
@@ -439,9 +435,9 @@ const webinarSchema = new mongoose.Schema({
     required: true,
     default: false,
   },
-  price:{
+  price: {
     type: Number,
-    required: function() {
+    required: function () {
       return this.isPaid === true
     }
   },
