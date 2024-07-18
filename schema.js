@@ -79,7 +79,11 @@ const userSchema = new mongoose.Schema({
       id: {type: mongoose.Schema.Types.ObjectId,
         ref : "Webinar",
       }
-    }]
+    }],
+    webinarLimit : {
+      type: Number,
+      default: 0,
+    }
 });
 
 const jobSchema = new mongoose.Schema({

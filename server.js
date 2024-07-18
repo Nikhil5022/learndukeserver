@@ -1221,26 +1221,16 @@ app.post("/create-webinar", async (req, res) => {
     if (!user) return res.status(404).send("User not found");
     if (!mentor.isPremium) return res.status(400).send("Subscribe to any of our plans to create a webinar.");
 
-    console.log("Processing dates");
+    const limit = webinarLimits(mentor);
+    if (user.webinarLimit >= limit) {
+      return res.status(400).send("You have reached the limit of webinars you can create.");
+    }
 
     const startTime = new Date(webinar.startTime);
     const endTime = new Date(webinar.endTime);
 
     webinar.startTime = new Date(startTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
     webinar.endTime = new Date(endTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
-    //  = startTimeUTC;
-    // = endTimeUTC;
-    // try {
-    //   // console.log("Formatting date and processing image");
-    //   // const formattedDate = await formatWebinarDate(startTimeUTC);
-    //   // const imageBuffer = await processWebinarImage(webinar.title, user.name, formattedDate);
-    //   // finalWebinar =  await uploadWebinarImage(imageBuffer, webinar);
-
-
-    // } catch (err) {
-    //   console.error("Error processing webinar image:", err);
-    //   return res.status(500).send("Error processing webinar image" +  err);
-    // }
 
     try {
       const newPic = await cloudinary.uploader.upload(image, {
@@ -1268,6 +1258,8 @@ app.post("/create-webinar", async (req, res) => {
 
     await newWebinar.save();
     user.myWebinars.unshift(newWebinar._id);
+    user.webinarLimit += 1;
+
     await user.save();
 
     const authUrl = generateAuthUrl(newWebinar._id);
@@ -1279,69 +1271,19 @@ app.post("/create-webinar", async (req, res) => {
   }
 });
 
-// const IMAGE_PATH = path.join(__dirname, 'public', 'webinar.jpg');
-
-// async function processWebinarImage(title, userName, formattedDate) {
-//   try {
-//     console.log("Reading image");
-//     const imagePath = await fs.promises.readFile(IMAGE_PATH);
-//     const image = await Jimp.read(imagePath);
-//     const sm = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-//     const lg = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-
-//     console.log("Printing text on image");
-//     image.print(sm, 30, 20, "Surely Work | Webinar")
-//          .print(lg, 30, 130, { text: title, alignmentX: Jimp.HORIZONTAL_ALIGN_LEFT }, 800)
-//          .print(sm, 30, 400, formattedDate)
-//          .print(sm, 400, 400, userName)
-//         //  .write("./webinar-edited.jpg")
-
-//     console.log("Getting image buffer");
-//     return await image.getBufferAsync(Jimp.MIME_JPEG);
-//   }
-//   catch (error) {
-//     if (error.code === 'ENOENT') {
-//       throw new Error("Image file not found:", error);
-//     } else if (error instanceof Jimp.Error) {
-//       throw new Error("Jimp error processing image:", error);
-//     } else {
-//       throw new Error("Unexpected error processing webinar image:", error);
-//     }
-//   }
-// }
-
-// async function uploadWebinarImage(imageBuffer, webinar) {
-//   try {
-//     const result = await new Promise((resolve, reject) => {
-//       console.log("Uploading image to Cloudinary");
-//       const uploadStream = cloud.uploader.upload_stream(
-//         { folder: "LearnDuke", width: 854, height: 480, crop: "fit", quality: "auto"},
-//         (error, result) => {
-//           if (error) {
-//             console.error("Error uploading webinar photo:", error);
-//             reject(new Error("Error uploading webinar photo:", error));
-//           } else {
-//             console.log("Image uploaded to Cloudinary successfully");
-//             webinar.photo = {
-//               public_id: result.public_id,
-//               url: result.secure_url
-//             }; 
-//             resolve(webinar);
-//           }
-//         }
-//       );
-//       streamifier.createReadStream(imageBuffer).pipe(uploadStream);
-//     });
-//     return result;
-//   } catch (error) {
-//     console.error("Error uploading webinar photo:", error);
-//     throw new Error("Error uploading webinar photo:", error);
-//   }
-// }
-
-// function formatWebinarDate(date) {
-//   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-// }
+function webinarLimits(mentor) {
+  let limit = 0; 
+  mentor.plans.forEach(plan => {
+    if (plan && plan == 'Premium' || plan == 'Lifetime') {
+      limit = Math.max(limit, Infinity);
+    } else if (plan && plan == 'Advance') {
+      limit = Math.max(limit, 9);
+    } else if (plan && plan == 'Basic') {
+      limit = Math.max(limit, 3);
+    }
+});
+  return limit;
+}
 
 function generateAuthUrl(webinarId) {
   return oauth2Client.generateAuthUrl({
@@ -1350,6 +1292,21 @@ function generateAuthUrl(webinarId) {
     state: JSON.stringify({ webinarId }),
   });
 }
+
+cron.schedule('0 0 0 1 * *', async () => {
+  console.log('Resetting webinar limits for all mentors...');
+  try {
+    const users = await User.find();
+    for (const user of users) {
+      if (user.webinarLimit > 0) {
+        user.webinarLimit = 0;
+        await user.save();
+      }
+    }
+  } catch (error) {
+    console.error('Error resetting webinar limits:', error);
+  }
+});
 
 //for deleting the webinar
 app.delete("/delete-webinar", async (req, res) => {
