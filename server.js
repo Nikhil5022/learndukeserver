@@ -45,7 +45,7 @@ app.use(
 app.use(express.json());
 app.use(fileUpload());
 const { google } = require("googleapis");
-const path = require("path");
+const sendEmail = require("./mailer.js")
 
 // Connect to MongoDB Atlas
 mongoose
@@ -1184,19 +1184,23 @@ app.get("/oauth2callback", async (req, res) => {
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
   console.log(req.body);
-  const { webinarId } = JSON.parse(state);
-  res.redirect(`/create-meet-event?webinarId=${webinarId}`);
+  const { webinarId, mail } = JSON.parse(state);
+  res.redirect(`/create-meet-event?webinarId=${webinarId}&mail=${mail}`);
 });
 
 app.get("/create-meet-event", async (req, res) => {
   try {
-    const { webinarId } = req.query;
+    const { webinarId, mail } = req.query;
     const webinar = await Webinar.findById(webinarId);
     if (!webinar) {
       return res.status(404).send("Webinar not found");
     }
     const event = await createMeetEvent(oauth2Client, webinar);
     webinar.liveLink = event.hangoutLink;
+
+    // send mail to user 
+    // sendMail(mail, "Webinar created Successfully | SurelyWork", type, webinar)
+
     await webinar.save()
     res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
@@ -1262,7 +1266,7 @@ app.post("/create-webinar", async (req, res) => {
 
     await user.save();
 
-    const authUrl = generateAuthUrl(newWebinar._id);
+    const authUrl = generateAuthUrl(newWebinar._id, user.email);
     console.log("Webinar created successfully");
     res.status(200).send(authUrl);
   } catch (error) {
@@ -1285,11 +1289,11 @@ function webinarLimits(mentor) {
   return limit;
 }
 
-function generateAuthUrl(webinarId) {
+function generateAuthUrl(webinarId, mail) {
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
-    state: JSON.stringify({ webinarId }),
+    state: JSON.stringify({ webinarId, mail }),
   });
 }
 
@@ -1837,6 +1841,18 @@ app.get(
 app.get("/", (req, res) => {
   res.send("Home Page");
 });
+
+app.post("/send-mail",async (req,res) => {
+  try {
+    const { id, mail } = req.body;
+    const webinar = await Webinar.findById(id);
+    await sendEmail({name: "Mayur Sonare",mail, subject: "Webinar creation successful", webinar});
+    res.status(200).send("Mail sent successfully");
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal server error");
+  }
+})
 
 // Start server
 const PORT = process.env.PORT || 3000;
