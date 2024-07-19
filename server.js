@@ -1452,55 +1452,80 @@ app.get("/past-webinars", async (req, res) => {
 
 // get my webinars
 app.get("/get-my-webinars/:id", async (req, res) => {
+  const { page = 1, limit = 3 } = req.query;
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
     const user = await User.findOne({ email: id });
     if (!user) {
       return res.status(404).send("User not found");
     }
-    // Use Promise.all to handle async operations within a loop
+
     const webinars = await Promise.all(
       user.myWebinars.map(async (obj) => {
-        return Webinar.findById({ _id: obj });
+        return Webinar.findById(obj);
       })
     );
-    return res.status(200).send(webinars);
+
+    const paginatedWebinars = webinars.slice((page - 1) * limit, page * limit);
+
+    const totalPages = Math.ceil(webinars.length / limit);
+
+    return res.status(200).json({
+      webinars: paginatedWebinars,
+      totalPages,
+      currentPage: parseInt(page, 10),
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).send("Internal server error");
   }
 });
+
 
 
 //get registered webinars
 app.get("/my-registered-webinars/:id", async (req, res) => {
+  const { page = 1, limit = 3 } = req.query;  // Add pagination support
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    console.log(id)
+    console.log(`Fetching webinars for user with email: ${id}`);
+    
     const user = await User.findOne({ email: id });
     if (!user) {
+      console.log("User not found");
       return res.status(404).send("User not found");
     }
-    console.log("1")
 
-    // user.joinedWebinars.forEach(async (obj) => {
-    //   const webinar = await Webinar.findById({ _id: obj.id });
-    //   webinars.push(webinar);
-    // });
-    console.log(user)
-    const webinars = await Promise.all(
+    console.log(`User found: ${user}`);
+
+    // Fetch webinars using Promise.all
+    const allWebinars = await Promise.all(
       user.joinedWebinars.map(async (obj) => {
-        return Webinar.findById({ _id: obj });
-      }
-      ));
+        return Webinar.findById(obj);
+      })
+    );
 
+    // Apply pagination
+    const paginatedWebinars = allWebinars.slice((page - 1) * limit, page * limit);
 
-    return res.status(200).send(webinars);
+    // Calculate total pages
+    const totalPages = Math.ceil(allWebinars.length / limit);
+
+    console.log(`Returning ${paginatedWebinars.length} webinars out of ${allWebinars.length} total.`);
+
+    return res.status(200).json({
+      webinars: paginatedWebinars,
+      totalPages,
+      currentPage: parseInt(page, 10),
+    });
   } catch (error) {
-    console.log(error);
+    console.log(`Internal server error: ${error}`);
     return res.status(500).send("Internal server error");
   }
 });
+
 
 app.get("/getWhatsappNumber/:id", async (req, res) => {
   try {
