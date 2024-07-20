@@ -48,7 +48,8 @@ const sendEmail = async (options) => {
     }
     .details {
       display: flex;
-      justify-content: space-around;
+      flex-direction: column;
+      justify-content: space-evenly;
       padding: 10px 20px;
       color: #524949;
       font-weight: 800;
@@ -59,7 +60,7 @@ const sendEmail = async (options) => {
     }
     .buttons {
       display: flex;
-      flex-direction: column;
+      flex-direction: column; 
       justify-content: space-between;
       align-items: center;
     }
@@ -159,7 +160,7 @@ const sendEmail = async (options) => {
       },
     });
     const mailOptions = {
-      from: `Surelywork | <webinar@surelywork.com>`,
+      from: `Surelywork <${"webinar@surelywork.com"}>`,
       to: options.mail,
       subject: options.subject,
       html: template,

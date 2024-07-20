@@ -1184,13 +1184,14 @@ app.get("/oauth2callback", async (req, res) => {
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
   console.log(req.body);
-  const { webinarId, mail } = JSON.parse(state);
-  res.redirect(`/create-meet-event?webinarId=${webinarId}&mail=${mail}`);
+  const { webinarId, userId } = JSON.parse(state);
+  res.redirect(`/create-meet-event?webinarId=${webinarId}&userId=${userId}`);
 });
 
 app.get("/create-meet-event", async (req, res) => {
   try {
-    const { webinarId, mail } = req.query;
+    const { webinarId, userId } = req.query;
+    const user = await User.findById(userId);
     const webinar = await Webinar.findById(webinarId);
     if (!webinar) {
       return res.status(404).send("Webinar not found");
@@ -1199,11 +1200,13 @@ app.get("/create-meet-event", async (req, res) => {
     webinar.liveLink = event.hangoutLink;
 
     // send mail to user 
-    // sendMail(mail, "Webinar created Successfully | SurelyWork", type, webinar)
-
+    await sendEmail({name: user.name, mail: user.email, subject: "SurelyWork | Webinar created Successfully", type: "webinar", webinar})
+    console.log("SendSuccessfully")
+    
     await webinar.save()
     res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
   } catch (error) {
+    console.log("error")
     res.status(500).send("Error creating event");
   }
 });
@@ -1266,7 +1269,7 @@ app.post("/create-webinar", async (req, res) => {
 
     await user.save();
 
-    const authUrl = generateAuthUrl(newWebinar._id, user.email);
+    const authUrl = generateAuthUrl({webinarId:newWebinar._id, userId: user._id});
     console.log("Webinar created successfully");
     res.status(200).send(authUrl);
   } catch (error) {
@@ -1289,11 +1292,11 @@ function webinarLimits(mentor) {
   return limit;
 }
 
-function generateAuthUrl(webinarId, mail) {
+function generateAuthUrl({webinarId, userId}) {
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
-    state: JSON.stringify({ webinarId, mail }),
+    state: JSON.stringify({ webinarId, userId }),
   });
 }
 
