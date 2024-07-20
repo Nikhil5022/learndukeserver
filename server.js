@@ -1200,7 +1200,7 @@ app.get("/create-meet-event", async (req, res) => {
     webinar.liveLink = event.hangoutLink;
 
     // send mail to user 
-    await sendEmail({name: user.name, mail: user.email, subject: "SurelyWork | Webinar created Successfully", type: "webinar", webinar})
+    await sendEmail({name: user.name, mail: user.email, subject: "SurelyWork | Webinar created Successfully", webinar})
     console.log("SendSuccessfully")
     
     await webinar.save()

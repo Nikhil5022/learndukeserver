@@ -1,7 +1,7 @@
 const nodeMailer = require("nodemailer");
 
 const sendEmail = async (options) => {
-  let template = `<!DOCTYPE html>
+  let template = await `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
