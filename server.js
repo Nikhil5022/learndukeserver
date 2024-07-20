@@ -245,22 +245,39 @@ app.post("/updateUser/:email", async (req, res) => {
 });
 
 app.get("/getJobs/:email", async (req, res) => {
+  const { page = 1, limit = 2 } = req.query;
+
   try {
     const user = await User.findOne({ email: req.params.email });
     if (!user) {
       return res.status(404).send("User not found");
     }
-    let jobs = [];
-    for (let i = 0; i < user.jobs.length; i++) {
-      const job = await Job.findOne({ _id: user.jobs[i] });
-      jobs.push(job);
-    }
 
-    res.send(jobs);
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const totalJobs = user.jobs.length;
+    const totalPages = Math.ceil(totalJobs / limitNumber);
+    const startIndex = (pageNumber - 1) * limitNumber;
+
+    const jobs = await Promise.all(
+      user.jobs
+        .slice(startIndex, startIndex + limitNumber)
+        .map(jobId => Job.findOne({ _id: jobId }))
+    );
+
+    const filteredJobs = jobs.filter(job => job !== null);
+
+    res.send({
+      jobs: filteredJobs,
+      currentPage: pageNumber,
+      totalPages: totalPages
+    });
   } catch (error) {
     res.status(500).send(error);
   }
 });
+
+
 
 app.delete("/deleteJob/:jobId", async (req, res) => {
   try {
