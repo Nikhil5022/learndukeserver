@@ -1209,7 +1209,7 @@ app.get("/create-meet-event", async (req, res) => {
     }
     
     await webinar.save()
-    res.redirect(`${process.env.FRONTEND_URLTEST}/webinars`);
+    res.redirect(`${process.env.FRONTEND_URLTEST}/detailedWebinar/${webinar._id}`);
   } catch (error) {
     console.log("error")
     res.status(500).send("Error creating event");
