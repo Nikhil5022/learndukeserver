@@ -1,4 +1,3 @@
-// import mongoose from "mongoose";
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -16,8 +15,6 @@ const userSchema = new mongoose.Schema({
     default: [],
   },
   profilephoto: {
-    // type: String,
-    // default: ''
     public_id: {
       type: String,
       required: true,
@@ -70,16 +67,24 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
   myWebinars: [{
-    type:String
-  }],
-  joinedWebinars: [
-    {
-        type:String
-    }],
-    webinarLimit : {
-      type: Number,
-      default: 0,
-    }
+    type: String,
+  },],
+  joinedWebinars: [{
+     type: String,
+  },],
+  webinarLimit: {
+    type: Number,
+    default: 0,
+  },
+  roles: {
+    type: [String],
+    default: ["user"],
+    enum: ["user", "hr", "mentor"]
+  },
+  company: {
+    type: String,
+    default: "",
+  },
 });
 
 const jobSchema = new mongoose.Schema({
@@ -391,25 +396,28 @@ const webinarSchema = new mongoose.Schema({
     public_id: {
       type: String,
       required: true,
-      default: '1234',
+      default: "1234",
     },
     url: {
       type: String,
       required: true,
-    }
-  },
-  topics: [{
-    name: {
-      type: String,
-
     },
-    descriptions: {
-      type: [String],
-    }
-  }],
-  additionalBenefits: [{
-    type: String,
-  }],
+  },
+  topics: [
+    {
+      name: {
+        type: String,
+      },
+      descriptions: {
+        type: [String],
+      },
+    },
+  ],
+  additionalBenefits: [
+    {
+      type: String,
+    },
+  ],
   description: {
     type: String,
     required: true,
@@ -421,7 +429,7 @@ const webinarSchema = new mongoose.Schema({
   creator: {
     id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     name: {
@@ -431,7 +439,7 @@ const webinarSchema = new mongoose.Schema({
     photo: {
       type: String,
       required: true,
-    }
+    },
   },
   isPaid: {
     type: Boolean,
@@ -442,8 +450,8 @@ const webinarSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: function () {
-      return this.isPaid === true
-    }
+      return this.isPaid === true;
+    },
   },
   startTime: {
     type: Date,
@@ -455,19 +463,21 @@ const webinarSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    default: 'Upcoming',
+    default: "Upcoming",
     required: true,
-    enum: ['Live', 'Past', 'Upcoming'],
+    enum: ["Live", "Past", "Upcoming"],
   },
-  participants: [{
-    type: String,
-    ref: 'User',
-  }],
+  participants: [
+    {
+      type: String,
+      ref: "User",
+    },
+  ],
   liveLink: {
     type: String,
     required: true,
-  }
-})
+  },
+});
 
 const Admin = mongoose.model("Admin", adminSchema);
 const Job = mongoose.model("Job", jobSchema);
@@ -475,7 +485,7 @@ const User = mongoose.model("User", userSchema);
 const Payment = mongoose.model("Payment", paymentSchema);
 const Mentor = mongoose.model("Mentor", mentorSchema);
 const Review = mongoose.model("Review", Reviewschema);
-const Webinar = mongoose.model("Webinar", webinarSchema)
+const Webinar = mongoose.model("Webinar", webinarSchema);
 
 // export  {Admin, Job, User};
 module.exports = { Admin, Job, User, Payment, Mentor, Review, Webinar };

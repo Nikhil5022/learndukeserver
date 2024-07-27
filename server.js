@@ -82,7 +82,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://learndukeserver-test.vercel.app/auth/google/callback",
+      callbackURL: "http://localhost:3000/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -91,6 +91,7 @@ passport.use(
         const profilephoto = profile.photos[0].value;
 
         // Check if user already exists
+        let isLogin = false;
         let user = await User.findOne({ email: email });
         if (!user) {
           // If user doesn't exist, create a new one
@@ -98,7 +99,6 @@ passport.use(
             email: email,
             name: name,
             jobs: [],
-            accessToken: accessToken,
             profilephoto: {
               public_id: "1234",
               url: profilephoto,
@@ -107,14 +107,14 @@ passport.use(
           await user.save();
         } else {
           // If user exists, update their accessToken and profile photo
-          user.accessToken = accessToken;
           user.profilephoto = {
             public_id: "1234",
             url: user.profilephoto.url,
           };
+          isLogin = true;
           await user.save();
         }
-        done(null, user);
+        done(null, {user, isLogin, accessToken});
       } catch (error) {
         console.error("Error saving user details to database:", error);
         done(error, null);
@@ -149,10 +149,27 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
   (req, res) => {
-    // Successful authentication, redirect to home page or handle as needed
-    res.redirect(
-      `${process.env.FRONTEND_URLTEST}/?email=${req.user.email}&name=${req.user.name}&accessToken=${req.user.accessToken}`
-    );
+    const user = req.user.user;
+    const isLogin = req.user.isLogin;
+    const accessToken = req.user.accessToken
+    if(isLogin == true){
+      if(user.roles.includes("hr")){
+        //redirect to hr dashboard
+        res.redirect(
+          `${process.env.FRONTEND_URLTEST}/?email=${user.email}&name=${user.name}&accessToken=${accessToken}&isLogin=${false}`
+        );
+      }else{
+        res.redirect(
+          `${process.env.FRONTEND_URLTEST}/?email=${user.email}&name=${user.name}&accessToken=${accessToken}&isLogin=${true}`
+        );
+      }
+    }else{
+      //send to who am i page to fill the details
+      res.redirect(
+        // `${process.env.FRONTEND_URLTEST}
+        `http://localhost:5173/who-am-i?email=${user.email}&name=${user.name}&accessToken=${accessToken}&isLogin=${false}`
+      );
+    }
   }
 );
 
@@ -1218,12 +1235,9 @@ app.get("/create-meet-event", async (req, res) => {
 
 app.post("/create-webinar", async (req, res) => {
   try {
-    console.log("Starting create-webinar endpoint");
-
     const { mail, webinar, image } = req.body;
     if (!webinar) return res.status(404).send("Details not found for the webinar.");
 
-    console.log("Fetching mentor and user");
     const [mentor, user] = await Promise.all([
       Mentor.findOne({ email: mail }),
       User.findOne({ email: mail })
@@ -1240,7 +1254,6 @@ app.post("/create-webinar", async (req, res) => {
 
     const startTime = new Date(webinar.startTime);
     const endTime = new Date(webinar.endTime);
-
     webinar.startTime = new Date(startTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
     webinar.endTime = new Date(endTime.getTime() - (5 * 60 * 60 * 1000 + 30 * 60 * 1000));
 
@@ -1275,8 +1288,8 @@ app.post("/create-webinar", async (req, res) => {
     await user.save();
 
     const authUrl = generateAuthUrl({webinarId:newWebinar._id, userId: user._id});
-    console.log("Webinar created successfully");
     res.status(200).send(authUrl);
+    
   } catch (error) {
     console.error("Error creating webinar:", error);
     return res.status(500).send(error.message);
@@ -1493,8 +1506,6 @@ app.get("/get-my-webinars/:id", async (req, res) => {
     return res.status(500).send("Internal server error");
   }
 });
-
-
 
 //get registered webinars
 app.get("/my-registered-webinars/:id", async (req, res) => {
